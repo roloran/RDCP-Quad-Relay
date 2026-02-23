@@ -4,13 +4,14 @@
 #include <Arduino.h>
 #include "lora.h"
 
-#define FW_SCENARIO   "Neuhaus v2.0"
+#define FW_SCENARIO   "Neuhaus 2026"
 #define FW_RDCP       "v0.4"
-#define FW_VERSION    "002"
+#define FW_VERSION    "003"
 
 #define SERIAL_PREFIX "DA: "
 
 #define INFOLEN 256
+#define LONGINFOLEN 512
 
 /**
  * Open the Serial port for I/O with default settings.
@@ -66,12 +67,12 @@ void serial_process_command(String s, String processing_mode="ECHO: ", bool pers
 void serial_banner(void);
 
 /**
- * Enable BT access
+ * Enable BT/BLE access
  */
 void enable_bt(void);
 
 /**
- * Disable BT access
+ * Disable BT/BLE access
  */
 void disable_bt(void);
 

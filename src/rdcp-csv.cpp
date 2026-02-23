@@ -6,7 +6,7 @@
 #include "FS.h"
 #include <LittleFS.h>
 
-int64_t last_csv_timestamp[NUMCHANNELS] = { RDCP_TIMESTAMP_ZERO, RDCP_TIMESTAMP_ZERO };
+int64_t last_csv_timestamp[NUMCHANNELS] = { RDCP_TIMESTAMP_ZERO, RDCP_TIMESTAMP_ZERO, RDCP_TIMESTAMP_ZERO, RDCP_TIMESTAMP_ZERO };
 
 extern lora_message current_lora_message;
 extern rdcp_message rdcp_msg_in;
@@ -85,7 +85,7 @@ void print_rdcp_csv(void)
   char info[2*INFOLEN];
 
   uint16_t refnr = RDCP_OA_REFNR_SPECIAL_ZERO;
-  if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT)
+  if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT) // does not exlude private OAs yet
   {
     refnr = rdcp_msg_in.payload.data[1] + 256 * rdcp_msg_in.payload.data[2];
   }
@@ -94,8 +94,8 @@ void print_rdcp_csv(void)
     refnr = rdcp_msg_in.payload.data[0] + 256 * rdcp_msg_in.payload.data[1];
   }
 
-  snprintf(info, 2*INFOLEN, "RDCPCSV: %04X-%s,%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%d,%04X,%d,%04X,%04X,%04X,%04X,%02X,%d,%02X,%02X,%02X,%04X,%d,%3.3f,%.2f,%.2f", 
-    CFG.rdcp_address, current_lora_message.channel == CHANNEL433 ? "433" : "868",
+  snprintf(info, 2*INFOLEN, "RDCPCSV: %04X-CH%s,%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%d,%04X,%d,%04X,%04X,%04X,%04X,%02X,%d,%02X,%02X,%02X,%04X,%d,%3.3f,%.2f,%.2f", 
+    CFG.rdcp_address, current_lora_message.channel,
     now - last_csv_timestamp[current_lora_message.channel],
     now, 
     CFEst[current_lora_message.channel],

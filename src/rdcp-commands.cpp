@@ -97,7 +97,7 @@ void rdcp_pass_response_to_scheduler(uint8_t channel, bool no_larger_delay=false
     if (no_larger_delay)
     { // if larger delays have been disabled, use a minimum delay based on relay identifier
         my_delay = -100 * (1 + CFG.relay_identifier);
-        if (channel == CHANNEL868) my_delay -= 4 * SECONDS_TO_MILLISECONDS; // allow for 433 MHz headstart
+        if (channel == CHANNEL868DA) my_delay -= 4 * SECONDS_TO_MILLISECONDS; // allow for 433 MHz headstart
     }
 
     rdcp_txqueue_add(channel, data_for_scheduler, RDCP_HEADER_SIZE + rdcp_response.header.rdcp_payload_length,
@@ -132,7 +132,7 @@ void rdcp_cmd_send_echo_response(void)
         rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
         rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
         rdcp_prepare_response_header(false);
-        rdcp_pass_response_to_scheduler(CHANNEL868);
+        rdcp_pass_response_to_scheduler(CHANNEL868DA);
     }
 
     return;
@@ -180,7 +180,6 @@ void rdcp_cmd_send_da_status_response(bool unsolicited = false)
                 if (want_reset) neighbors[i].counted = true;
             }
         }
-        // if ((neighbors[i].sender >= RDCP_ADDRESS_BBKDA_LOWERBOUND) && (neighbors[i].sender < RDCP_ADDRESS_MG_LOWERBOUND))
         if ((neighbors[i].sender >= RDCP_ADDRESS_HQ_LOWERBOUND) && (neighbors[i].sender < RDCP_ADDRESS_MG_LOWERBOUND)) // include HQ devices
         {
             if (!neighbors[i].counted)
@@ -216,7 +215,7 @@ void rdcp_cmd_send_da_status_response(bool unsolicited = false)
     rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
     rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
     rdcp_prepare_response_header(true);
-    rdcp_pass_response_to_scheduler(CHANNEL868);
+    rdcp_pass_response_to_scheduler(CHANNEL868DA);
 
     /*
       We use DA Status Requests periodically to align when we send Heartbeats.
@@ -746,7 +745,7 @@ void rdcp_check_heartbeat(void)
         rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
         rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
         rdcp_prepare_response_header(true); // re-use sequence number from 433 MHz channel message
-        rdcp_pass_response_to_scheduler(CHANNEL868, true);
+        rdcp_pass_response_to_scheduler(CHANNEL868DA, true);
     }
 
     return;
@@ -949,7 +948,7 @@ void rdcp_send_cire(uint8_t subtype, uint16_t refnr, char *content)
     for (int i=0; i < rdcp_response.header.rdcp_payload_length; i++) 
         data_for_scheduler[i + RDCP_HEADER_SIZE] = rdcp_response.payload.data[i];
 
-    rdcp_txqueue_add(CHANNEL868, data_for_scheduler, RDCP_HEADER_SIZE + rdcp_response.header.rdcp_payload_length,
+    rdcp_txqueue_add(CHANNEL868DA, data_for_scheduler, RDCP_HEADER_SIZE + rdcp_response.header.rdcp_payload_length,
       IMPORTANT, NOFORCEDTX, TX_CALLBACK_NONE, my_delay);
 
     return;

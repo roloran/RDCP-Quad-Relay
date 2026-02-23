@@ -1,10 +1,10 @@
-# ROLORAN RDCP Two-Channel LoRa Relay
+# ROLORAN RDCP Quad-Channel LoRa Relay
 
-This repository holds the ESP32 firmware implementation for two-channel RDCP v0.4 relays according to the [RDCP Specs](https://github.com/roloran/RDCP-Specs) as developed in the [ROLORAN project](https://dtecbw.de/home/forschung/unibw-m/projekt-roloran) for the Neuhaus scenario v2.0.
+This repository holds the ESP32S3 firmware implementation for four-channel MERLIN-Bases as developed in the [ROLORAN project](https://dtecbw.de/home/forschung/unibw-m/projekt-roloran) for the Neuhaus scenario 2026.
 
-RDCP v0.4 relays use two LoRa channels (in the 433 MHz and the 868 MHz radio frequency bands) to facilitate the scenario-wide bidirectional communication between headquarters and [mobile devices](https://github.com/roloran/ROLODECK) in blackout crisis situations. RDCP v0.4 relays use an ESP32 MCU on a custom PCB along with two EBYTE-based LoRa radios. They are intended to be integrated with RDCP DAs ("Digitale Anschlagtafeln", interactive digital bulletin boards for official announcements) but can be used on their own as well (thus serving as BBKs, backbone nodes).
+It is built upon RDCP v0.4 and our previous two-channel RDCP-Relay implementation, leveraging one additional 868 MHz channel for communication with MERLIN-Messenger devices and another one for sniffing and tunneling LoRaWAN sensor data. It is implemented for our custom PCB, using an ESP32S3 MCU with four EBYTE LoRa radios.
 
-## Compilation and Flashing of the Two-Channel Relay
+## Compilation and Flashing
 
 This repository uses PlatformIO (PIO), and thus all dependency management and workflows should be handled automatically or at least similar to other PIO projects.
 
@@ -16,29 +16,27 @@ platformio run --target upload --upload-port $LORADEV
 roloran-terminal.py
 ```
 
-If you do not use our custom PCB, you will need to adjust the pinout in the source code accordingly to control the two SX1262 radios.
+If you do not use our custom PCB, you will need to adjust the pinout in the source code accordingly to control the SX126x LoRa radios.
 
-## Initial Configuration of the Two-Channel Relay
+## Initial Configuration
 
-Before the two-channel relay will work as implemented, it needs to be configured via a series of serial commands, similar to the ROLODECK provisioning workflow.
+Before the quad-channel relay will work, it needs to be configured via a series of serial commands, similar to the RDCP-Modem, RDCP-Relay, and ROLODECK provisioning workflow.
 
-However, while the RDCP two-channel relay configuration is similar to other ROLORAN LoRa device configuration procedures, additional care must be taken to appropriately address its two-channel nature.
+The commands `SHOW CONFIG` and `RESET CONFIG` can be used similar to other ROLORAN RDCP devices. For initial configuration, the following commands *must* be used once:
 
-The commands `SHOW CONFIG` and `RESET CONFIG` can be used similar to other ROLORAN devices. For initial configuration, the following commands *must* be used once:
-
-- `LORAFREQ 433.175 868.200` sets the LoRa channel frequencies for both radios in MHz. Note that the `%.3f` format must be used.
-- `LORABW 125 125` sets the LoRa channel bandwidth for both radios in kHz.
-- `LORASF 07 12` sets the LoRa spreading factor for both radios. The use of leading zeros is mandatory for `SF < 10`.
-- `LORACR 8 5` sets the LoRa coding rates for both radios in RadioLib format.
-- `LORASW 12 34` sets the LoRa syncword for both radios; uses hexadecimal numbers.
-- `LORAPW 05 07` sets the TX power for both radios in dBm; make sure to not violate any regional regulations in combination with the used cabling and antennas.
-- `LORAPL 15 15` sets the LoRa preamble length for both radios in number of symbols.
+- `LORAFREQ 433.175 869.525 869.000 868.100` sets the LoRa channel frequencies for all radios in MHz. Note that the `%.3f` format must be used. The order, also for the subsequent commands, is CHANNEL433, CHANNEL868DA, CHANNEL868MG, CHANNEL868LW.
+- `LORABW 125 125 125 125` sets the LoRa channel bandwidth for all radios in kHz.
+- `LORASF 07 07 07 07` sets the LoRa spreading factor for all radios. The use of leading zeros is mandatory for `SF < 10`.
+- `LORACR 5 5 5 5` sets the LoRa coding rates for all radios in RadioLib format (5 to 8).
+- `LORASW 12 12 12 34` sets the LoRa syncword for all radios; uses hexadecimal numbers.
+- `LORAPW 00 00 00 00` sets the TX power for all radios in dBm; make sure to not violate any regional regulations in combination with the used cabling and antennas.
+- `LORAPL 15 15 15 08` sets the LoRa preamble length for all radios in number of symbols (two decimal digits each).
 - `RDCPADDR 0200` sets the RDCP address of the device. Make sure to use the appropriate RDCP address range for this kind of devices.
 - `RDCPRLID 0` sets the RDCP Relay Identifier of the device. Double-check that this setting is correct and unique in the overall RDCP infrastructure or the whole mesh will drown in packet collisions.
 - `RDCPNUMRL 10` sets the number of relays used in the current RDCP scenario.
 - `RDCPRLOA 123` sets the three other relays to use in the OA direction. Make sure you have chosen a good plan for the whole RDCP infrastructure.
 - `RDCPRLCR 34E` sets the three other relays to use in the CIRE direction. See note about `RDCPRLOA`.
-- `RDCPTS7R DE` sets the Relay1 RDCP Header field value for Timeslot-7 transmission.
+- `RDCPTS7R DE` optionally sets the Relay1 RDCP Header field value for Timeslot-7 transmission. Avoid the use of this command unless you're fully aware of the impact.
 - `RDCPNEFF 0204` sets the neighbor to fetch messages from at start-up.
 - `MULTICAST B000 B001 B002 0000 0000` set the five multicast RDCP addresses for this device.
 - `NAME` gives the relay a name. This may be helpful for human operators.
@@ -62,7 +60,7 @@ Additional commands:
 - `RDCPDUPETABLESET 020C 0123` sets the duplicate table entry for a specified RDCP address to the given value.
 - `MAINTENANCE` switches the device into Maintenance Mode.
 - `SERIAL text` sends the given text via UART to the hard-wire-connected `DA`.
-- `CORRIDOR 60` sets the corridor basetime in seconds, i.e., how long to keep the channel free when hearing `CIRE` messages.
+- `CORRIDOR 60` sets the corridor basetime in seconds, i.e., how long to keep the channel free when hearing `CIRE` messages. Used for legacy MGs only.
 - `RDCPSFMUL 1` sets the spreading-factor-based time multiplier, e.g., 1 for SF7 and 10 for SF12.
 - `RDCPSEQNR 1234` sets this device's most recently used RDCP Sequence Number, e.g., after replacing the ESP32 hardware.
 
@@ -72,8 +70,8 @@ The relay can optionally be connected to a DA via a serial / UART interface. Ser
 
 The following notifications are sent to the DA:
 
-- `DA_TIME dd.mm.yyyy HH:MM (s)` when a new RDCP Timestamp is received. `s` is the RDCP Infrastructure status contained in RDCP Timestamp messages as decimal number.
-- `DA_RDCP <base64>` when a RDCP Message is received that may be relevant for the DA, e.g., an OA, Signature, or a message addressed to this device.
+- `DA_TIME dd.mm.yyyy HH:MM (s)` when a new valid RDCP Timestamp is received. `s` is the RDCP Infrastructure status contained in RDCP Timestamp messages as decimal number.
+- `DA_RDCP <base64>` when a valid RDCP Message is received that may be relevant for the DA, e.g., an OA, Signature, or a message addressed to this device.
 - `DA_DELIVERY <address>` when a Delivery Receipt was received from the given neighbor.
 - `DA_OA_RESET` when all OAs shall be reset.
 - `DA_RESETDEVICE` when a device reset is requested.
@@ -89,10 +87,9 @@ DAs are expected to use the following serial commands for interaction with the r
 - `RDCPCIRE <subtype> <referencenumber> <textual content>` is used to send a new CIRE. `subtype` must be a 2-digit hex number, `referencenumber` a 4-digit hex number; the `textual content` format should match MGs' and be plain ASCII text without line breaks. Note that the Relay takes care of Unishox2 compression and authenticated encryption. DAs are expected to send CIREs again in case of timeouts (no `DA_CIRESENT` or HQ ACK received).
 - `RDCPFETCH 12EF` fetches a single message identified by its reference number from the designated neighbor. Result may consist of multiple fragments and typically includes signature.
 
-DAs may use assigned virtual RDCP addresses along with the `SIMRX 433` and `SIMRX 868` commands to trigger the forwarding, relaying, or processing of arbitrary other RDCP messages if deemed an actual necessity. DAs must not use the relay as LoRa modem and especially not interfere otherwise with the sequence numbers used for the relay's RDCP address.
+DAs may use assigned virtual RDCP addresses along with the `SIMRX 433` and `SIMRX 86[789]` (for CHANNEL868LW, CHANNEL868MG, CHANNEL868DA) commands to trigger the forwarding, relaying, or processing of arbitrary other RDCP messages if deemed an actual necessity. DAs must not use the relay as LoRa modem and especially not interfere otherwise with the sequence numbers used for the relay's RDCP address.
 
-DAs also must implement their own duplicate handling as they may receive the
-same OAs, Signatures, or other RDCP Messages multiple times.
+DAs also must implement their own duplicate handling as they may receive the same OAs, Signatures, or other RDCP Messages multiple times.
 
 Finally, DAs are expected to implement their own RDCP Message Board functionality and honor the handling of multiple OA fragments, lifetimes, and lifetime updates independently of the Relay.
 

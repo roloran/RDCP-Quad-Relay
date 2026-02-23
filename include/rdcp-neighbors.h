@@ -8,7 +8,7 @@
 
 /**
  * Add or update a neighbor table entry based on the most recently received RDCP Message. 
- * @param channel CHANNEL433 or CHANNEL868 
+ * @param channel CHANNEL433 or CHANNEL868[DA|MG|LW]
  * @param sender RDCP Address of neighbor 
  * @param rssi RSSI value of received LoRa packet 
  * @param snr SNR value of received LoRa packet 
@@ -23,16 +23,16 @@ void rdcp_neighbor_register_rx(uint8_t channel, uint16_t sender, double rssi, do
 void rdcp_neighbor_dump(void);
 
 struct neighbor_table_entry {
-    uint8_t channel   = CHANNEL433;
-    uint16_t sender   = RDCP_ADDRESS_SPECIAL_ZERO;
-    double rssi       = 0.0;
-    double snr        = 0.0;
-    int64_t timestamp = RDCP_TIMESTAMP_ZERO;
-    bool heartbeat    = false;      // has sent an explitit Heartbeat  
-    bool counted      = false;      // has been counted for DA Status Response
-    bool explicit_refnr = false;    // has sent an explicit latest OA RefNr
+    uint8_t channel       = NO_CHANNEL;
+    uint16_t sender       = RDCP_ADDRESS_SPECIAL_ZERO;
+    double rssi           = 0.0;
+    double snr            = 0.0;
+    int64_t timestamp     = RDCP_TIMESTAMP_ZERO;
+    bool heartbeat        = false;      // has sent an explitit Heartbeat  
+    bool counted          = false;      // has been counted for DA Status Response
+    bool explicit_refnr   = false;    // has sent an explicit latest OA RefNr
     uint16_t latest_refnr = RDCP_OA_REFNR_SPECIAL_ZERO; // OA RefNr reported by MG
-    uint16_t roamingrec = RDCP_ADDRESS_SPECIAL_ZERO; // Roaming Recommendation reported by MG
+    uint16_t roamingrec   = RDCP_ADDRESS_SPECIAL_ZERO; // Roaming Recommendation reported by MG
 };
 
 #endif 

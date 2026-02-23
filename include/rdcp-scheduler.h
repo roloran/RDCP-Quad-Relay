@@ -8,18 +8,18 @@
   * Data structure for a TX Queue entry.
   */
 struct txqueue_entry {
-  uint8_t payload[RDCP_HEADER_SIZE + RDCP_MAX_PAYLOAD_SIZE];      //< data of the outgoing message
-  uint8_t payload_length = 0;                   //< length of the outgoing message
-  int64_t currently_scheduled_time = RDCP_TIMESTAMP_ZERO;         //< timestamp when to transmit
-  int64_t originally_scheduled_time = RDCP_TIMESTAMP_ZERO;        //< timestamp when originally planned to transmit
-  uint8_t num_of_reschedules = 0;               //< how often the entry has already been rescheduled
-  bool important = false;                       //< message is important and should not be dropped even it if takes longer
-  bool force_tx = false;                        //< indicator whether message should be sent independend of CAD status
-  uint8_t callback_selector = TX_CALLBACK_NONE; //< which callback function to use when TX is finished
-  int64_t timeslot_duration = RDCP_DURATION_ZERO;                 //< timeslot duration in milliseconds including retransmissions
-  uint8_t cad_retry = 0;                        //< CAD retry attempt number
-  bool waiting = false;                         //< message is still waiting to be sent
-  bool in_process = false;                      //< this message is currently being processed
+  uint8_t payload[RDCP_HEADER_SIZE + RDCP_MAX_PAYLOAD_SIZE] = {0};                 //< data of the outgoing message
+  uint8_t payload_length                                    = 0;                   //< length of the outgoing message
+  int64_t currently_scheduled_time                          = RDCP_TIMESTAMP_ZERO; //< timestamp when to transmit
+  int64_t originally_scheduled_time                         = RDCP_TIMESTAMP_ZERO; //< timestamp when originally planned to transmit
+  uint8_t num_of_reschedules                                = 0;                   //< how often the entry has already been rescheduled
+  bool important                                            = false;               //< message is important and should not be dropped even it if takes longer
+  bool force_tx                                             = false;               //< indicator whether message should be sent independend of CAD status
+  uint8_t callback_selector                                 = TX_CALLBACK_NONE;    //< which callback function to use when TX is finished
+  int64_t timeslot_duration                                 = RDCP_DURATION_ZERO;  //< timeslot duration in milliseconds including retransmissions
+  uint8_t cad_retry                                         = 0;                   //< CAD retry attempt number
+  bool waiting                                              = false;               //< message is still waiting to be sent
+  bool in_process                                           = false;               //< this message is currently being processed
 };
   
 /// Keep the TX Queue small on purpose. We don't want single devices to block the channel for too long.
@@ -47,7 +47,7 @@ struct txaheadqueue_entry {
 };
   
 /// The length of the TX Ahead Queue is kept to a reasonable minimum as this queue is currently not in use
-#define MAX_TXAHEADQUEUE_ENTRIES 4
+#define MAX_TXAHEADQUEUE_ENTRIES 2
   
 /**
   * Data structure for the overall TX Ahead Queue.
@@ -66,7 +66,7 @@ struct txaheadqueue {
   * or delayed too long. `force_tx` prohibits re-scheduling. The `callback_selector`
   * determines which function is called when the message has been sent including all of
   * its retransmissions. If `force_tx` is used, the `forced_time` should be given. 
-  * @param channel Either CHANNEL433 or CHANNEL868
+  * @param channel Either CHANNEL433 or CHANNEL868[DA|MG|LW]
   * @param data Complete RDCP Message (header+payload) to schedule
   * @param len Length of data (RDCP Message) in bytes
   * @param important True if the message is so important that it must not be dropped even after multiple re-schedules
@@ -99,7 +99,7 @@ struct txaheadqueue {
   * Schedule an outgoing RDCP Message in the "ahead of time" queue.
   * This is intended for intermediate-term scheduling, like sending a SIGNATURE after a corresponding RDCP Message. 
   * Periodic retransmissions should not be added to any queue unless the LoRa channel is considered free currently. 
-  * @param channel CHANNEL433 or CHANNEL868
+  * @param channel CHANNEL433 or CHANNEL868[DA|MG|LW]
   * @param data LoRa packet payload (i.e., RDCP Header + RDCP Payload)
   * @param len Length of data in bytes 
   * @param important IMPORTANT if the message must not be dropped, otherwise NOTIMPORTANT 
@@ -129,19 +129,19 @@ int get_num_txaq_entries(uint8_t channel);
 
 /**
  * Print the current TX Queue on Serial. 
- * @param channel CHANNEL433 or CHANNEL868
+ * @param channel CHANNEL433 or CHANNEL868[DA|MG|LW]
  */
 void rdcp_dump_txq(uint8_t channel);
 
 /**
  * Reschedule current TXQ entries due to channel being busy. 
- * @param channel Affected channel, CHANNEL433 or CHANNEL868
+ * @param channel Affected channel, CHANNEL433 or CHANNEL868[DA|MG|LW]
  */
 void rdcp_reschedule_on_busy_channel(uint8_t channel);
 
 /**
  * Does TXQ have at least one FORCEDTX entry?
- * @param channel CHANNEL433 or CHANNEL868
+ * @param channel CHANNEL433 or CHANNEL868[DA|MG|LW]
  * @return bool true if hard-scheduled entry exists, false otherwise
  */
 bool rdcp_txqueue_has_forced_entry(uint8_t channel);

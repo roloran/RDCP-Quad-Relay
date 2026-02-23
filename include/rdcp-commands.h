@@ -25,7 +25,6 @@ void rdcp_check_fetch_timeout(void);
 
 /**
  * Send an RDCP Citizen Report to the HQ. 
- * 
  */
 void rdcp_send_cire(uint8_t subtype, uint16_t refnr, char *content);
 
@@ -46,7 +45,7 @@ struct rtc_entry {
     int64_t alarm   = 0;
     uint8_t restart = 0;
     uint8_t persist = 0;
-    char rtc[256];
+    char rtc[256] = {0};
 };
 
 #define MAX_RTC 16

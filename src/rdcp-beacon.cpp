@@ -7,14 +7,14 @@
 #include "rdcp-common.h"
 
 extern da_config CFG;
-int64_t time_of_last_beacon[NUMCHANNELS] = {0, 0};
-int32_t number_of_last_beacon[NUMCHANNELS] = {0, 0};
+int64_t time_of_last_beacon[NUMCHANNELS] = {0, 0, 0, 0};
+int32_t number_of_last_beacon[NUMCHANNELS] = {0, 0, 0, 0};
 
 void rdcp_beacon_send(uint8_t channel, int32_t beacon_number)
 {
     char message[INFOLEN];
     snprintf(message, INFOLEN, "RDCP-Beacon %" PRId32 " by %04X (%s) on CHANNEL%d",
-        beacon_number, CFG.rdcp_address, CFG.name, channel == CHANNEL433 ? 433 : 868);
+             beacon_number, CFG.rdcp_address, CFG.name, channel);
     serial_writeln("INFO: Scheduling RDCP-Beacon");
 
     rdcp_message rm;
@@ -70,16 +70,44 @@ void rdcp_beacon(void)
         }
     }
 
-    if (CFG.beacon_interval[CHANNEL868] > 0)
+    if (CFG.beacon_interval[CHANNEL868DA] > 0)
     {
-        if (get_num_txq_entries(CHANNEL868) == 0) // skip if channel is busy otherwise
+        if (get_num_txq_entries(CHANNEL868DA) == 0) // skip if channel is busy otherwise
         {
             int64_t now = my_millis();
-            if (now > time_of_last_beacon[CHANNEL868] + CFG.beacon_interval[CHANNEL868])
+            if (now > time_of_last_beacon[CHANNEL868DA] + CFG.beacon_interval[CHANNEL868DA])
             {
-                time_of_last_beacon[CHANNEL868] = now; 
-                number_of_last_beacon[CHANNEL868]++;
-                rdcp_beacon_send(CHANNEL868, number_of_last_beacon[CHANNEL868]);
+                time_of_last_beacon[CHANNEL868DA] = now; 
+                number_of_last_beacon[CHANNEL868DA]++;
+                rdcp_beacon_send(CHANNEL868DA, number_of_last_beacon[CHANNEL868DA]);
+            }
+        }
+    }
+
+    if (CFG.beacon_interval[CHANNEL868MG] > 0)
+    {
+        if (get_num_txq_entries(CHANNEL868MG) == 0) // skip if channel is busy otherwise
+        {
+            int64_t now = my_millis();
+            if (now > time_of_last_beacon[CHANNEL868MG] + CFG.beacon_interval[CHANNEL868MG])
+            {
+                time_of_last_beacon[CHANNEL868MG] = now; 
+                number_of_last_beacon[CHANNEL868MG]++;
+                rdcp_beacon_send(CHANNEL868MG, number_of_last_beacon[CHANNEL868MG]);
+            }
+        }
+    }
+
+    if (CFG.beacon_interval[CHANNEL868LW] > 0)
+    {
+        if (get_num_txq_entries(CHANNEL868LW) == 0) // skip if channel is busy otherwise
+        {
+            int64_t now = my_millis();
+            if (now > time_of_last_beacon[CHANNEL868LW] + CFG.beacon_interval[CHANNEL868LW])
+            {
+                time_of_last_beacon[CHANNEL868LW] = now; 
+                number_of_last_beacon[CHANNEL868LW]++;
+                rdcp_beacon_send(CHANNEL868LW, number_of_last_beacon[CHANNEL868LW]);
             }
         }
     }

@@ -176,7 +176,7 @@ void rdcp_send_ack_unsigned(uint16_t origin, uint16_t destination, uint16_t seqn
     /* Schedule the crafted message for sending */
     memcpy(&data, &rm.header, RDCP_HEADER_SIZE);
     for (int i=0; i<rm.header.rdcp_payload_length; i++) data[i + RDCP_HEADER_SIZE] = rm.payload.data[i];
-    rdcp_txqueue_add(CHANNEL868, data, RDCP_HEADER_SIZE + rm.header.rdcp_payload_length, 
+    rdcp_txqueue_add(CHANNEL868DA, data, RDCP_HEADER_SIZE + rm.header.rdcp_payload_length, 
         IMPORTANT, NOTFORCEDTX, TX_CALLBACK_ACK, TX_WHEN_CF);
 
     return;

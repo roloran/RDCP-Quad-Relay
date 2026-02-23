@@ -19,14 +19,21 @@ extern da_config CFG;
 extern runtime_da_data DART;
 
 int32_t bad_crc_counter;
-uint16_t last_origin[NUMCHANNELS] = { RDCP_ADDRESS_SPECIAL_ZERO, RDCP_ADDRESS_SPECIAL_ZERO };
-uint16_t last_seqnr[NUMCHANNELS]  = { RDCP_SEQUENCENR_SPECIAL_ZERO, RDCP_SEQUENCENR_SPECIAL_ZERO };
+uint16_t last_origin[NUMCHANNELS] = { RDCP_ADDRESS_SPECIAL_ZERO, RDCP_ADDRESS_SPECIAL_ZERO, RDCP_ADDRESS_SPECIAL_ZERO, RDCP_ADDRESS_SPECIAL_ZERO };
+uint16_t last_seqnr[NUMCHANNELS]  = { RDCP_SEQUENCENR_SPECIAL_ZERO, RDCP_SEQUENCENR_SPECIAL_ZERO, RDCP_SEQUENCENR_SPECIAL_ZERO, RDCP_SEQUENCENR_SPECIAL_ZERO };
 bool currently_in_fetch_mode = false;
 char serial_info[INFOLEN];
 
 void rdcp_handle_incoming_lora_message(void)
 {
-    cpu_fast(); 
+    cpu_fast();
+    
+    if (current_lora_message.channel == CHANNEL868LW)
+    {
+        /* LoRa packets received on this channel must be LoRaWAN traffic, not RDCP Messages. */
+        // TODO: Hook to LoRaWAN packet handling for filtering and tunneling
+        return;
+    }
     
     /* Check whether it could be an RDCP message at all */
     if (current_lora_message.payload_length < RDCP_HEADER_SIZE)
@@ -46,21 +53,13 @@ void rdcp_handle_incoming_lora_message(void)
         serial_writeln("INFO: RDCP checksum mismatch - not processing");
         // NB: Any RDCP Header or RDCP Payload field may have been corrupted,
         //     so we do not process anything further, including updates to CFEst.
-        bad_crc_counter++;
-        if (bad_crc_counter % 100 == 0)
-        {
-            /* 
-                Bad CRC usually is the result of poor reception or other devices sending 
-                non-RDCP LoRA packets on the same channel. However, we re-initialize our 
-                LoRa radios every now and then in case it might be hardware-related. 
-            */
-            serial_writeln("WARNING: Bad CRC counter exceeded threshold - consider additional countermeasures!");
-            setup_radio();
-        }
         return;
     }
 
-    /* Update the CFEst since we received an RDCP Message */
+    // TODO: On selected channels, we can return here to completely ignore certain messages, e.g. Roaming Beacons from other DAs on 868DA.
+
+    /* Update the CFEst since we received an RDCP Message; parameters for 433 MHz propagation cycle tracking only */
+    // TODO: Consider CFEst updates per channel, maybe take more direct control of CHANNEL868DA but consider MGs receiving multiple DAs
     rdcp_update_cfest_in(rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number);
 
     /* Stop any TX events on the current channel as long as it is busy */
@@ -104,7 +103,7 @@ void rdcp_handle_incoming_lora_message(void)
     bool explicit_refnr = false;
     uint16_t latest_refnr = RDCP_OA_REFNR_SPECIAL_ZERO;
     uint16_t roamingrec = RDCP_ADDRESS_SPECIAL_ZERO;
-    if ((current_lora_message.channel == CHANNEL868) && 
+    if ((current_lora_message.channel == CHANNEL868MG) && 
         (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_HEARTBEAT) && 
         (rdcp_msg_in.header.sequence_number == RDCP_SEQUENCENR_SPECIAL_ZERO) &&
         (rdcp_msg_in.header.origin == rdcp_msg_in.header.sender))
@@ -139,7 +138,7 @@ void rdcp_handle_incoming_lora_message(void)
             }
             if (rdcp_check_forward_da_relevance()) rdcp_msg_to_da_via_serial();
         }
-        else /* RDCP Message received on CHANNEL868 */
+        else /* RDCP Message received on CHANNEL868DA or CHANNEL868MG */
         {
             /* Forward the RDCP Message on 433 MHz if we are the Entry Point
                unless there are reasons not to forward it. */
@@ -152,9 +151,9 @@ void rdcp_handle_incoming_lora_message(void)
                     if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT)
                     {
                         // Re-schedule other entries on 868 MHz so we get the ACK out first 
-                        rdcp_txqueue_reschedule(CHANNEL868, CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
+                        rdcp_txqueue_reschedule(CHANNEL868DA, CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
                         rdcp_send_ack_unsigned(CFG.rdcp_address, rdcp_msg_in.header.origin, 
-                                               rdcp_msg_in.header.sequence_number);
+                                               rdcp_msg_in.header.sequence_number); // TODO: Give MGs time to switch back to DA channel first!!
                     }
 
                     /* Forward the message on the 433 MHz channel unless we are the destination */
@@ -194,7 +193,7 @@ void rdcp_handle_incoming_lora_message(void)
                     We are not the designated Entry Point but we got a new (not duplicate) message 
                     on 868 MHz first. If we receive it later on 433 MHz, we will consider it a 
                     duplicate. While we still may relay it then, we would not forward it on 868 MHz. 
-                    Thus, we have to forward in on 868 MHz and to our DA here. 
+                    Thus, we have to forward in on 868 MHz (including HQ) and to our DA here. 
                 */
                 if (rdcp_check_forward_868_relevance() &&
                     (rdcp_msg_in.header.message_type != RDCP_MSGTYPE_HEARTBEAT)) // don't shadow-forward heartbeats
@@ -207,8 +206,8 @@ void rdcp_handle_incoming_lora_message(void)
                     if ((rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT) && 
                         (rdcp_msg_in.header.sender >= RDCP_ADDRESS_MG_LOWERBOUND))
                     { // was 2* corridor_basetime
-                        rdcp_update_channel_free_estimation(CHANNEL868, rdcp_get_channel_free_estimation(CHANNEL868) + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
-                        rdcp_txqueue_reschedule(CHANNEL868, 0); // re-schedule based on CFEst
+                        rdcp_update_channel_free_estimation(CHANNEL868DA, rdcp_get_channel_free_estimation(CHANNEL868DA) + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
+                        rdcp_txqueue_reschedule(CHANNEL868DA, 0); // re-schedule based on CFEst
                     }
                     rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL); // add a delay
                 }

@@ -15,7 +15,7 @@ void rdcp_send_message_cad(uint8_t channel);
  * This is implicitly used for `force_tx`-scheduled messages or when
  * Channel Activity Detection has delayed for too long without
  * non-important messages getting dropped in the process.
- * @param channel Either CHANNEL433 or CHANNEL868
+ * @param channel Either CHANNEL433 or CHANNEL868[DA|MG|LW]
  */
 void rdcp_send_message_force(uint8_t channel);
 

@@ -5,7 +5,7 @@
 #include "rdcp-common.h"
 
 struct callback_chain {
-    bool     in_use        = false;  /// chain currently in use?
+    bool     in_use        = false;                      /// chain currently in use?
     int64_t  timeout       = RDCP_DURATION_ZERO;         /// timeout timestamp if callback isn't triggered
     int64_t  activity      = RDCP_TIMESTAMP_ZERO;        /// when did we start the most recent activity?
     uint16_t refnr         = RDCP_OA_REFNR_SPECIAL_ZERO; /// relevant OA reference number

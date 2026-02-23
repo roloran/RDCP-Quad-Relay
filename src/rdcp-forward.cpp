@@ -120,7 +120,7 @@ void rdcp_forward_schedule(int add_random_delay)
           // start with upper bound of random EP delay
           forced_time -= 5000; 
           // add time proportional to timeslot duration (message length, retransmissions) and own relay id 
-          forced_time -= (1 + CFG.relay_identifier) * rdcp_get_timeslot_duration(CHANNEL868, data_for_scheduler);
+          forced_time -= (1 + CFG.relay_identifier) * rdcp_get_timeslot_duration(CHANNEL868DA, data_for_scheduler);
         }
         
         char info[INFOLEN];
@@ -128,7 +128,7 @@ void rdcp_forward_schedule(int add_random_delay)
             rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number, rdcp_msg_in.header.sender);
         serial_writeln(info);
 
-        rdcp_txqueue_add(CHANNEL868, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
+        rdcp_txqueue_add(CHANNEL868DA, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
           important, NOFORCEDTX, TX_CALLBACK_FORWARD, forced_time);
     }
 

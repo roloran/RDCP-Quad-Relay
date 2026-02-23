@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 /**
- * Initialize persistent storage on the T-Deck.
+ * Initialize persistent storage on the device.
  * To be called once after power-on.
  */
 void setup_persistence(void);
@@ -34,7 +34,7 @@ void persistence_reset_replay_serial(void);
 uint16_t get_next_rdcp_sequence_number(uint16_t origin);
 
 /**
- * Set the next RDCP Sequence NUmber to use for a specific RDCP address. Used internally 
+ * Set the next RDCP Sequence Number to use for a specific RDCP address. Used internally 
  * as well as for testing purposes. 
  * @param origin RDCP Address or Origin 
  * @param seq Next SequenceNumber to use for this Otigin 
@@ -43,7 +43,7 @@ uint16_t get_next_rdcp_sequence_number(uint16_t origin);
 uint16_t set_next_rdcp_sequence_number(uint16_t origin, uint16_t seq);
 
 /**
- * @return true if the device has FFat available, false otherwise
+ * @return true if the device has persistent storage available, false otherwise
  */
 bool hasStorage(void);
 

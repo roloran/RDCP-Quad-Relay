@@ -202,14 +202,14 @@ int64_t rdcp_get_channel_free_estimation(uint8_t channel);
 
 /**
  * Set CFEst for a given channel.
- * @param channel CHANNEL433 or CHANNEL868
+ * @param channel CHANNEL433 or CHANNEL868[DA|MG|LW]
  * @param new_value New CFEst value for channel
  */
 bool rdcp_set_channel_free_estimation(uint8_t channel, int64_t new_value);
 
 /**
  * Update CFEst for a given channel (set only if longer busy than previously assumed).
- * @param channel CHANNEL433 or CHANNEL868
+ * @param channel CHANNEL433 or CHANNEL868[DA|MG|LW]
  * @param new_value New CFEst value for channel
  */
 bool rdcp_update_channel_free_estimation(uint8_t channel, int64_t new_value);
@@ -218,7 +218,7 @@ bool rdcp_update_channel_free_estimation(uint8_t channel, int64_t new_value);
   * Calculate the airtime (in milliseconds) of sending a LoRa packet with the payload size
   * given as parameter under consideration of the currently used LoRa settings, such as
   * bandwidth, coding rate, and preamble length.
-  * @param channel Either CHANNEL433 or CHANNEL868
+  * @param channel Either CHANNEL433 or CHANNEL868[DA|MG|LW]
   * @param payload_size Number of bytes for the LoRa packet payload (e.g., RDCP Message including Header and Payload)
   * @return Calculated airtime in milliseconds based on current LoRa radio parameters (e.g., SF, bandwidth)
   */
@@ -227,7 +227,7 @@ uint16_t airtime_in_ms(uint8_t channel, uint8_t payload_size);
 /**
   * Return the duration of a full timeslot given an RDCP Message based
   * on its Message Type (i.e. initial RetransmissionCounter) and size.
-  * @param channel Either CHANNEL433 or CHANNEL868
+  * @param channel Either CHANNEL433 or CHANNEL868[DA|MG|LW]
   * @param data RDCP Message to analyse. Must at least be an RDCP Header with rdcp_payload_size field. 
   * @return Timeslot duration in milliseconds (when applying the number of retransmissions according to RDCP specs)
   */
@@ -243,7 +243,7 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr);
 /**
  * Update the Channel Free Estimation (CFEst) when sending an RDCP Message 
  * under propagation cycle considerations. 
- * @param channel CHANNEL433 or CHANNEL868 
+ * @param channel CHANNEL433 or CHANNEL868[DA|MG|LW] 
  * @param len Length of RDCP Message in bytes (Header + Payload)
  * @param rcnt Retransmission counter used in the outgoing message 
  * @param mt RDCP Message Type of the outgoing message
@@ -316,11 +316,11 @@ int rdcp_get_number_of_tracked_propagation_cycles(void);
 #define MAX_TRACKED_PCS      10
 
 struct tracked_propagation_cycle {
-  uint16_t origin = RDCP_ADDRESS_SPECIAL_ZERO;
-  uint16_t seqnr  = RDCP_SEQUENCENR_SPECIAL_ZERO;
-  int64_t  timestamp_end = RDCP_TIMESTAMP_ZERO;
+  uint16_t origin          = RDCP_ADDRESS_SPECIAL_ZERO;
+  uint16_t seqnr           = RDCP_SEQUENCENR_SPECIAL_ZERO;
+  int64_t  timestamp_end   = RDCP_TIMESTAMP_ZERO;
   int64_t  timestamp_known = RDCP_TIMESTAMP_ZERO;
-  uint8_t  status = PC_STATUS_NONE;
+  uint8_t  status          = PC_STATUS_NONE;
 };
 
 /*
@@ -416,6 +416,11 @@ struct tracked_propagation_cycle {
 #define TX_CALLBACK_PERIODIC868  8
 
 #define NUM_TX_CALLBACKS         9
+
+#define COUNT_ZERO  0
+#define TIME_ZERO   0
+#define ONLY_ONE    1
+#define FIRST       1
 
 #endif 
 /* EOF */

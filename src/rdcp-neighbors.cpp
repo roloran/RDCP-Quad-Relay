@@ -9,7 +9,7 @@ void rdcp_neighbor_register_rx(uint8_t channel, uint16_t sender, double rssi, do
     uint16_t used_sender = sender;
 
     /* Map neighboring Relays to the old BBK range on their 868 MHz channel */
-    if ((channel == CHANNEL868) &&
+    if ((channel == CHANNEL868DA) &&
         (sender >= RDCP_ADDRESS_DA_LOWERBOUND) && (sender <= RDCP_ADDRESS_MG_LOWERBOUND))
     {
         used_sender -= 0x0100;
@@ -56,7 +56,7 @@ void rdcp_neighbor_dump(void)
         {
             int mytime = (int) ((now - neighbors[i].timestamp) / (MINUTES_TO_MILLISECONDS));
             snprintf(info, INFOLEN, "INFO: Neighbor %d,%04X,%d,%.0f,%.0f,%c,%c,%04X,%04X,%dm",
-                     i, neighbors[i].sender, neighbors[i].channel == CHANNEL433 ? 433:868,
+                     i, neighbors[i].sender, neighbors[i].channel,
                      neighbors[i].rssi, neighbors[i].snr, 
                      neighbors[i].heartbeat ? 'H':'-', 
                      neighbors[i].explicit_refnr ? 'X':'-',

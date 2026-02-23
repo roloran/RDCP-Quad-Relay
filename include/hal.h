@@ -10,6 +10,10 @@
 #define HOURS_TO_SECONDS             3600
 #define HOURS_TO_MILLISECONDS        3600000
 
+#define MIN_FREE_RAM 8192
+#define STACK16K 16*1024
+#define MINIMUM_DELAY 1
+
 /**
  * @return Number of milliseconds since device start as int64_t
  */

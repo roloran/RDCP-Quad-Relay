@@ -9,7 +9,7 @@
 #endif
 
 rdcp_message rdcp_msg_in;
-int64_t CFEst[NUMCHANNELS] = {0, 0}; 
+int64_t CFEst[NUMCHANNELS] = {0, 0, 0, 0}; 
 extern da_config CFG; 
 extern lora_message current_lora_message;
 struct rdcp_dup_table dupe_table;              // One global RDCP Message Duplicate Table
@@ -98,7 +98,7 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
 
   char buf[INFOLEN];
   snprintf(buf, INFOLEN, "INFO: Channel %d CFEst4current (in): +%zu ms, @%llu ms (airtime %u ms, retrans %zu ms, timeslot %zu ms, %d fut ts)", 
-    (current_lora_message.channel == CHANNEL433) ? 433 : 868, 
+    current_lora_message.channel,
     channel_free_after, channel_free_at, airtime, remaining_current_sender_time, timeslot_duration, future_timeslots);
   serial_writeln(buf);
 
@@ -189,6 +189,7 @@ int rdcp_get_number_of_tracked_propagation_cycles(void)
 
   return result;
 }
+
 void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t mt, uint8_t relay1, uint8_t relay2, uint8_t relay3, uint16_t origin, uint16_t seqnr)
 {
   uint16_t airtime = airtime_in_ms(channel, len);
@@ -233,7 +234,7 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
 
   char buf[INFOLEN];
   snprintf(buf, INFOLEN, "INFO: Channel %d CFEst4current (out): +%zu ms, @%llu ms (airtime %u ms, retrans %zu ms, timeslot %zu ms, %d fut ts)", 
-    (channel == CHANNEL433) ? 433 : 868, 
+    channel, 
     channel_free_after, channel_free_at, airtime, remaining_current_sender_time, timeslot_duration, future_timeslots);
   serial_writeln(buf);
 

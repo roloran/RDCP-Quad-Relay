@@ -118,7 +118,7 @@ void rdcp_chain_starter(uint8_t callback_to_use, int starter, uint16_t destinati
             CC[TX_CALLBACK_FETCH_SINGLE].in_use = true;
             int64_t now = my_millis();
             CC[TX_CALLBACK_FETCH_SINGLE].activity = now;
-            CC[TX_CALLBACK_FETCH_SINGLE].timeout = now + 10 * MINUTES_TO_MILLISECONDS; // 10 minute timeout
+            CC[TX_CALLBACK_FETCH_SINGLE].timeout = now + 1 * MINUTES_TO_MILLISECONDS * CFG.sf_multiplier;
             CC[TX_CALLBACK_FETCH_SINGLE].refnr = refnr;
             CC[TX_CALLBACK_FETCH_SINGLE].destination = destination;
             CC[TX_CALLBACK_FETCH_SINGLE].last_mem_idx = starter;
@@ -145,7 +145,7 @@ void rdcp_chain_starter(uint8_t callback_to_use, int starter, uint16_t destinati
             CC[TX_CALLBACK_FETCH_ALL].in_use = true;
             int64_t now = my_millis();
             CC[TX_CALLBACK_FETCH_ALL].activity = now;
-            CC[TX_CALLBACK_FETCH_ALL].timeout = now + 10 * MINUTES_TO_MILLISECONDS; // 10 minute timeout
+            CC[TX_CALLBACK_FETCH_ALL].timeout = now + 1 * MINUTES_TO_MILLISECONDS * CFG.sf_multiplier;
             CC[TX_CALLBACK_FETCH_ALL].refnr = refnr;
             CC[TX_CALLBACK_FETCH_ALL].destination = destination;
             CC[TX_CALLBACK_FETCH_ALL].last_mem_idx = starter;
@@ -173,14 +173,14 @@ void rdcp_chain_starter(uint8_t callback_to_use, int starter, uint16_t destinati
             CC[TX_CALLBACK_PERIODIC868].in_use = true;
             int64_t now = my_millis();
             CC[TX_CALLBACK_PERIODIC868].activity = now;
-            CC[TX_CALLBACK_PERIODIC868].timeout = now + 10 * MINUTES_TO_MILLISECONDS; // 10 minute timeout
+            CC[TX_CALLBACK_PERIODIC868].timeout = now + 1 * MINUTES_TO_MILLISECONDS * CFG.sf_multiplier;
             CC[TX_CALLBACK_PERIODIC868].refnr = refnr;
             CC[TX_CALLBACK_PERIODIC868].destination = destination;
             CC[TX_CALLBACK_PERIODIC868].last_mem_idx = starter;
 
             mem.entries[starter].used_in_periodic868 = true;
 
-            rdcp_send_memory(starter, TX_CALLBACK_PERIODIC868, CHANNEL868);
+            rdcp_send_memory(starter, TX_CALLBACK_PERIODIC868, CHANNEL868DA);
         }
     }
 
@@ -228,7 +228,7 @@ void rdcp_chain_callback(uint8_t callback_type, bool has_timeout)
         {
             int64_t now = my_millis();
             CC[TX_CALLBACK_FETCH_SINGLE].activity = now;
-            CC[TX_CALLBACK_FETCH_SINGLE].timeout = now + 10 * MINUTES_TO_MILLISECONDS; // 10 minute timeout
+            CC[TX_CALLBACK_FETCH_SINGLE].timeout = now + 1 * MINUTES_TO_MILLISECONDS * CFG.sf_multiplier;
             CC[TX_CALLBACK_FETCH_SINGLE].last_mem_idx = memidx;
             mem.entries[memidx].used_in_fetch_single = true;
             rdcp_send_memory(memidx, TX_CALLBACK_FETCH_SINGLE, CHANNEL433);
@@ -273,7 +273,7 @@ void rdcp_chain_callback(uint8_t callback_type, bool has_timeout)
         {
             int64_t now = my_millis();
             CC[TX_CALLBACK_FETCH_ALL].activity = now;
-            CC[TX_CALLBACK_FETCH_ALL].timeout = now + 10 * MINUTES_TO_MILLISECONDS; // 10 minute timeout
+            CC[TX_CALLBACK_FETCH_ALL].timeout = now + 1 * MINUTES_TO_MILLISECONDS * CFG.sf_multiplier;
             CC[TX_CALLBACK_FETCH_ALL].last_mem_idx = memidx;
             mem.entries[memidx].used_in_fetch_all = true;
             rdcp_send_memory(memidx, TX_CALLBACK_FETCH_ALL, CHANNEL433);
@@ -330,10 +330,10 @@ void rdcp_chain_callback(uint8_t callback_type, bool has_timeout)
         {
             int64_t now = my_millis();
             CC[TX_CALLBACK_PERIODIC868].activity = now;
-            CC[TX_CALLBACK_PERIODIC868].timeout = now + 10 * MINUTES_TO_MILLISECONDS; // 10 minute timeout
+            CC[TX_CALLBACK_PERIODIC868].timeout = now + 1 * MINUTES_TO_MILLISECONDS * CFG.sf_multiplier;
             CC[TX_CALLBACK_PERIODIC868].last_mem_idx = memidx;
             mem.entries[memidx].used_in_periodic868 = true;
-            rdcp_send_memory(memidx, TX_CALLBACK_PERIODIC868, CHANNEL868);
+            rdcp_send_memory(memidx, TX_CALLBACK_PERIODIC868, CHANNEL868DA);
         }
         else
         { // no more memories to send -> conclude the chain
@@ -352,8 +352,8 @@ void rdcp_periodic_kickstart(void)
     if ((CFG.periodic_enabled) && 
         (!CC[TX_CALLBACK_PERIODIC868].in_use) && 
         (now > last_periodic_chain_finish + CFG.periodic_interval) &&
-        (now > rdcp_get_channel_free_estimation(CHANNEL868)) && 
-        (get_num_txq_entries(CHANNEL868) < 2))
+        (now > rdcp_get_channel_free_estimation(CHANNEL868DA)) && 
+        (get_num_txq_entries(CHANNEL868DA) < 2))
     {
         int first = mem.idx_first;
         int starter = RDCP_INDEX_NONE;

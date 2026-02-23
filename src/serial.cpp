@@ -8,14 +8,14 @@
 #include "rdcp-neighbors.h"
 #include "rdcp-commands.h"
 #include "rdcp-scheduler.h"
-#include "BluetoothSerial.h"
+#include <BleSerial.h> 
 #include "rdcp-csv.h"
 // #include <Preferences.h>
 
 lora_message lorapacket_in_sim;
 extern da_config CFG;
 extern runtime_da_data DART;
-BluetoothSerial SerialBT;
+BleSerial SerialBT;
 bool bt_on = false;
 extern int64_t last_dasresp_sent;
 // Preferences preferences;
@@ -40,13 +40,13 @@ void enable_bt(void)
   SerialBT.setTimeout(10);
   CFG.bt_enabled = true;
   bt_on = true;
-  serial_writeln("INFO: Enabling BT access");
+  serial_writeln("INFO: Enabling BLE access");
   return;
 }
 
 void disable_bt(void)
 {
-  serial_writeln("INFO: Disabling BT access");
+  serial_writeln("INFO: Disabling BLE access");
   SerialBT.end();
   CFG.bt_enabled = false;
   bt_on = false;
@@ -115,13 +115,13 @@ void serial_banner(void)
   snprintf(buf, INFOLEN, "%SINFO: Device TS4 all ones    : %s",                         SERIAL_PREFIX, CFG.ts4allones ? "enabled" : "disabled"); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
   snprintf(buf, INFOLEN, "%SINFO: Device TS7Relay1 value : %02X",                       SERIAL_PREFIX, CFG.ts7relay1); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
   snprintf(buf, INFOLEN, "%sINFO: Device RDCP Fetch from : %04X\0",                     SERIAL_PREFIX, CFG.neighbor_for_fetch); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
-  snprintf(buf, INFOLEN, "%sINFO: Device LoRa frequency  : %.3f MHz, %.3f MHz\0",       SERIAL_PREFIX, CFG.lora[CHANNEL433].freq, CFG.lora[CHANNEL868].freq); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
-  snprintf(buf, INFOLEN, "%sINFO: Device LoRa bandwidth  : %3.0f kHz, %3.0f kHz\0",     SERIAL_PREFIX, CFG.lora[CHANNEL433].bw, CFG.lora[CHANNEL868].bw); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
-  snprintf(buf, INFOLEN, "%sINFO: Device LoRa SF         : %2d, %2d\0",                 SERIAL_PREFIX, CFG.lora[CHANNEL433].sf, CFG.lora[CHANNEL868].sf); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
-  snprintf(buf, INFOLEN, "%sINFO: Device LoRa CR         : 4/%d, 4/%d\0",               SERIAL_PREFIX, CFG.lora[CHANNEL433].cr, CFG.lora[CHANNEL868].cr); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
-  snprintf(buf, INFOLEN, "%sINFO: Device LoRa syncword   : 0x%02X, 0x%02X\0",           SERIAL_PREFIX, CFG.lora[CHANNEL433].sw, CFG.lora[CHANNEL868].sw); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
-  snprintf(buf, INFOLEN, "%sINFO: Device LoRa TX power   : %d dBm, %d dBm\0",           SERIAL_PREFIX, CFG.lora[CHANNEL433].pw, CFG.lora[CHANNEL868].pw); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
-  snprintf(buf, INFOLEN, "%sINFO: Device LoRa preamble   : %2d symbols, %2d symbols\0", SERIAL_PREFIX, CFG.lora[CHANNEL433].pl, CFG.lora[CHANNEL868].pl); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
+  snprintf(buf, INFOLEN, "%sINFO: Device LoRa frequency  : %.3f MHz, %.3f MHz, %.3f MHz, %.3f MHz\0",             SERIAL_PREFIX, CFG.lora[CHANNEL433].freq, CFG.lora[CHANNEL868DA].freq, CFG.lora[CHANNEL868MG].freq, CFG.lora[CHANNEL868LW].freq); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
+  snprintf(buf, INFOLEN, "%sINFO: Device LoRa bandwidth  : %3.0f kHz, %3.0f kHz, %3.0f kHz, %3.0f kHz\0",         SERIAL_PREFIX, CFG.lora[CHANNEL433].bw, CFG.lora[CHANNEL868DA].bw, CFG.lora[CHANNEL868MG].bw, CFG.lora[CHANNEL868LW].bw); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
+  snprintf(buf, INFOLEN, "%sINFO: Device LoRa SF         : %2d, %2d, %2d, %2d\0",                                 SERIAL_PREFIX, CFG.lora[CHANNEL433].sf, CFG.lora[CHANNEL868DA].sf, CFG.lora[CHANNEL868MG].sf, CFG.lora[CHANNEL868LW].sf); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
+  snprintf(buf, INFOLEN, "%sINFO: Device LoRa CR         : 4/%d, 4/%d, 4/%d, 4/%d\0",                             SERIAL_PREFIX, CFG.lora[CHANNEL433].cr, CFG.lora[CHANNEL868DA].cr, CFG.lora[CHANNEL868MG].cr, CFG.lora[CHANNEL868LW].cr); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
+  snprintf(buf, INFOLEN, "%sINFO: Device LoRa syncword   : 0x%02X, 0x%02X, 0x%02X, 0x%02X\0",                     SERIAL_PREFIX, CFG.lora[CHANNEL433].sw, CFG.lora[CHANNEL868DA].sw, CFG.lora[CHANNEL868MG].sw, CFG.lora[CHANNEL868LW].sw); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
+  snprintf(buf, INFOLEN, "%sINFO: Device LoRa TX power   : %d dBm, %d dBm, %d dBm, %d dBm\0",                     SERIAL_PREFIX, CFG.lora[CHANNEL433].pw, CFG.lora[CHANNEL868DA].pw, CFG.lora[CHANNEL868MG].pw, CFG.lora[CHANNEL868LW].pw); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
+  snprintf(buf, INFOLEN, "%sINFO: Device LoRa preamble   : %2d symbols, %2d symbols, %2d symbols, %2d symbols\0", SERIAL_PREFIX, CFG.lora[CHANNEL433].pl, CFG.lora[CHANNEL868DA].pl, CFG.lora[CHANNEL868MG].pl, CFG.lora[CHANNEL868LW].pl); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf);
   snprintf(buf, INFOLEN, "%sINFO: Device Options         : Relay %s, EP %s, Fwd %s, Fetch %s, Per868 %s, Send %s, BT %s", SERIAL_PREFIX,
     CFG.relay_enabled    ? "+" : "DISABLED",
     CFG.ep_enabled       ? "+" : "DISABLED", 
@@ -164,7 +164,7 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
       int32_t free_heap = ESP.getFreeHeap();
       int32_t min_free_heap = ESP.getMinFreeHeap();
       rdcp_dump_txq(CHANNEL433);
-      rdcp_dump_txq(CHANNEL868);
+      rdcp_dump_txq(CHANNEL868DA);
 
       int32_t uptime_sec = (int32_t) (now/1000);
       int days = uptime_sec / (24 * 3600);
@@ -227,18 +227,24 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
   } // ^ SHOW
   else if (s_uppercase.startsWith("LORAFREQ "))
   {
-    // LORAFREQ 433.175 869.525
-    // 012345678901234567890123
+    // LORAFREQ 433.175 869.525 868.xxx 868.100
+    // 0123456789012345678901234567890123456789
     String p1 = s.substring(9, 16); // 9 -- 15   == 433 MHz frequency
-    String p2 = s.substring(17);    // 17 -- end == 868 MHz frequency
+    String p2 = s.substring(17, 24); 
+    String p3 = s.substring(25, 32); 
+    String p4 = s.substring(33);
     float f433 = p1.toFloat();
-    float f868 = p2.toFloat();
-    if ((f433 > 400.0) && (f868 > 800.0))
+    float f868da = p2.toFloat();
+    float f868mg = p3.toFloat();
+    float f868lw = p4.toFloat();
+    if ((f433 > 400.0) && (f868lw > 800.0))
     {
       CFG.lora[CHANNEL433].freq = f433;
-      CFG.lora[CHANNEL868].freq = f868;
-      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa frequencies to %.3f MHz and %.3f MHz",
-        CFG.lora[CHANNEL433].freq, CFG.lora[CHANNEL868].freq);
+      CFG.lora[CHANNEL868DA].freq = f868da;
+      CFG.lora[CHANNEL868MG].freq = f868mg;
+      CFG.lora[CHANNEL868LW].freq = f868lw;
+      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa frequencies to %.3f MHz, %.3f MHz, %.3f MHz and %.3f MHz",
+        CFG.lora[CHANNEL433].freq, CFG.lora[CHANNEL868DA].freq, CFG.lora[CHANNEL868MG].freq, CFG.lora[CHANNEL868LW].freq);
       serial_writeln(info);
       setup_radio();
       if (persist_selected_commands) persist_serial_command_for_replay(s);
@@ -250,18 +256,24 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
   }
   else if (s_uppercase.startsWith("LORABW "))
   {
-    // LORABW 125 250
-    // 01234567890123
+    // LORABW 125 250 125 125
+    // 012345678901234567890123
     String p1 = s.substring(7, 10); //  7 -- 9   == 433 MHz bandwidth 
-    String p2 = s.substring(11);    // 11 -- end == 868 MHz bandwidth
+    String p2 = s.substring(11, 14);   
+    String p3 = s.substring(15, 18);   
+    String p4 = s.substring(19);   
     float b433 = p1.toFloat();
-    float b868 = p2.toFloat();
-    if ((b433 > 100) && (b868 > 100))
+    float b868da = p2.toFloat();
+    float b868mg = p3.toFloat();
+    float b868lw = p4.toFloat();
+    if ((b433 > 100) && (b868lw > 100))
     {
       CFG.lora[CHANNEL433].bw = b433;
-      CFG.lora[CHANNEL868].bw = b868;
-      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa bandwidth to %3.0f kHz and %3.0f kHz",
-        CFG.lora[CHANNEL433].bw, CFG.lora[CHANNEL868].bw);
+      CFG.lora[CHANNEL868DA].bw = b868da;
+      CFG.lora[CHANNEL868MG].bw = b868mg;
+      CFG.lora[CHANNEL868LW].bw = b868lw;
+      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa bandwidth to %3.0f kHz, %3.0f kHz, %3.0f kHz and %3.0f kHz",
+        CFG.lora[CHANNEL433].bw, CFG.lora[CHANNEL868DA].bw, CFG.lora[CHANNEL868MG].bw, CFG.lora[CHANNEL868LW].bw);
       serial_writeln(info);
       setup_radio();
       if (persist_selected_commands) persist_serial_command_for_replay(s);
@@ -273,19 +285,25 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
   }
   else if (s_uppercase.startsWith("LORASF "))
   {
-    // LORASF 07 12
-    // 012345678901
+    // LORASF 07 12 07 07
+    // 01234567890123456789
     String p1 = s.substring(7, 9);
-    String p2 = s.substring(10);
+    String p2 = s.substring(10, 12);
+    String p3 = s.substring(13, 15);
+    String p4 = s.substring(16);
     int s433 = p1.toInt();
-    int s868 = p2.toInt();
+    int s868da = p2.toInt();
+    int s868mg = p3.toInt();
+    int s868lw = p4.toInt();
 
-    if ((s433 > 5) && (s868 > 5))
+    if ((s433 > 5) && (s868lw > 5))
     {
       CFG.lora[CHANNEL433].sf = s433;
-      CFG.lora[CHANNEL868].sf = s868;
-      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa spreading factors to %d and %d",
-        CFG.lora[CHANNEL433].sf, CFG.lora[CHANNEL868].sf);
+      CFG.lora[CHANNEL868DA].sf = s868da;
+      CFG.lora[CHANNEL868MG].sf = s868mg;
+      CFG.lora[CHANNEL868LW].sf = s868lw;
+      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa spreading factors to %d, %d, %d and %d",
+        CFG.lora[CHANNEL433].sf, CFG.lora[CHANNEL868DA].sf, CFG.lora[CHANNEL868MG].sf, CFG.lora[CHANNEL868LW].sf);
       serial_writeln(info);
       setup_radio();
       if (persist_selected_commands) persist_serial_command_for_replay(s);
@@ -297,18 +315,24 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
   }
   else if (s_uppercase.startsWith("LORACR "))
   {
-    // LORACR 8 5
-    // 0123456789
-    String p1 = s.substring(7,8);
-    String p2 = s.substring(9);
+    // LORACR 8 5 8 5
+    // 01234567890123456789
+    String p1 = s.substring(7, 8);
+    String p2 = s.substring(9, 10);
+    String p3 = s.substring(11, 12);
+    String p4 = s.substring(13, 14);
     int c433 = p1.toInt();
-    int c868 = p2.toInt();
-    if ((c433 > 4) && (c868 > 4))
+    int c868da = p2.toInt();
+    int c868mg = p3.toInt();
+    int c868lw = p4.toInt();
+    if ((c433 > 4) && (c868lw > 4))
     {
       CFG.lora[CHANNEL433].cr = c433;
-      CFG.lora[CHANNEL868].cr = c868;
-      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa coding rates to %d and %d",
-        CFG.lora[CHANNEL433].cr, CFG.lora[CHANNEL868].cr);
+      CFG.lora[CHANNEL868DA].cr = c868da;
+      CFG.lora[CHANNEL868MG].cr = c868mg;
+      CFG.lora[CHANNEL868LW].cr = c868lw;
+      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa coding rates to %d, %d, %d and %d",
+        CFG.lora[CHANNEL433].cr, CFG.lora[CHANNEL868DA].cr, CFG.lora[CHANNEL868MG].cr, CFG.lora[CHANNEL868LW].cr);
       serial_writeln(info);
       setup_radio();
       if (persist_selected_commands) persist_serial_command_for_replay(s);
@@ -320,21 +344,29 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
   }
   else if (s_uppercase.startsWith("LORASW "))
   {
-    // LORASW 12 34
-    // 012345678901
-    char buffer1[32], buffer2[32];
-    String p1 = s.substring(7,9);
-    String p2 = s.substring(10);
+    // LORASW 12 12 12 34
+    // 01234567890123456789
+    char buffer1[32], buffer2[32], buffer3[32], buffer4[32];
+    String p1 = s.substring(7, 9);
+    String p2 = s.substring(10, 12);
+    String p3 = s.substring(13, 15);
+    String p4 = s.substring(16);
     p1.toCharArray(buffer1, 32);
     p2.toCharArray(buffer2, 32);
+    p3.toCharArray(buffer3, 32);
+    p4.toCharArray(buffer4, 32);
     uint8_t s433 = strtol(buffer1, NULL, 16);
-    uint8_t s868 = strtol(buffer2, NULL, 16);
-    if ((s433 > 0) && (s868 > 0))
+    uint8_t s868da = strtol(buffer2, NULL, 16);
+    uint8_t s868mg = strtol(buffer3, NULL, 16);
+    uint8_t s868lw = strtol(buffer4, NULL, 16);
+    if ((s433 > 0) && (s868lw > 0))
     {
       CFG.lora[CHANNEL433].sw = s433;
-      CFG.lora[CHANNEL868].sw = s868;
-      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa sync words to 0x%02X and 0x%02X",
-        CFG.lora[CHANNEL433].sw, CFG.lora[CHANNEL868].sw);
+      CFG.lora[CHANNEL868DA].sw = s868da;
+      CFG.lora[CHANNEL868MG].sw = s868mg;
+      CFG.lora[CHANNEL868LW].sw = s868lw;
+      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa sync words to 0x%02X, 0x%02X, 0x%02X and 0x%02X",
+        CFG.lora[CHANNEL433].sw, CFG.lora[CHANNEL868DA].sw, CFG.lora[CHANNEL868MG].sw, CFG.lora[CHANNEL868LW].sw);
       serial_writeln(info);
       setup_radio();
       if (persist_selected_commands) persist_serial_command_for_replay(s);
@@ -346,18 +378,24 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
   }
   else if (s_uppercase.startsWith("LORAPW "))
   {
-    // LORAPW 10 14
-    // 012345678901
-    String p1 = s.substring(7,9);
-    String p2 = s.substring(10);
+    // LORAPW 10 14 10 00
+    // 01234567890123456789
+    String p1 = s.substring(7, 9);
+    String p2 = s.substring(10, 12);
+    String p3 = s.substring(13, 15);
+    String p4 = s.substring(16);
     int p433 = p1.toInt();
-    int p868 = p2.toInt();
-    if ((p433 > -15) && (p868 > -15))
+    int p868da = p2.toInt();
+    int p868mg = p3.toInt();
+    int p868lw = p4.toInt();
+    if ((p433 > -15) && (p868lw > -15))
     {
       CFG.lora[CHANNEL433].pw = p433;
-      CFG.lora[CHANNEL868].pw = p868;
-      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa TX power to %d dBm and %d dBm",
-        CFG.lora[CHANNEL433].pw, CFG.lora[CHANNEL868].pw);
+      CFG.lora[CHANNEL868DA].pw = p868da;
+      CFG.lora[CHANNEL868MG].pw = p868mg;
+      CFG.lora[CHANNEL868LW].pw = p868lw;
+      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa TX power to %d dBm, %d dBm, %d dBm and %d dBm",
+        CFG.lora[CHANNEL433].pw, CFG.lora[CHANNEL868DA].pw, CFG.lora[CHANNEL868MG].pw, CFG.lora[CHANNEL868LW].pw);
       serial_writeln(info);
       setup_radio();
       if (persist_selected_commands) persist_serial_command_for_replay(s);
@@ -369,18 +407,24 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
   }
   else if (s_uppercase.startsWith("LORAPL "))
   {
-    // LORAPL 15 15
-    // 012345678901
+    // LORAPL 15 15 15 08
+    // 01234567890123456789
     String p1 = s.substring(7, 9);
-    String p2 = s.substring(10);
+    String p2 = s.substring(10, 12);
+    String p3 = s.substring(13, 15);
+    String p4 = s.substring(16);
     int p433 = p1.toInt();
-    int p868 = p2.toInt();
-    if ((p433 > -1) && (p868 > -1))
+    int p868da = p2.toInt();
+    int p868mg = p3.toInt();
+    int p868lw = p4.toInt();
+    if ((p433 > -1) && (p868lw > -1))
     {
       CFG.lora[CHANNEL433].pl = p433;
-      CFG.lora[CHANNEL868].pl = p868;
-      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa preamble length to %d symbols and %d symbols",
-        CFG.lora[CHANNEL433].pl, CFG.lora[CHANNEL868].pl);
+      CFG.lora[CHANNEL868DA].pl = p868da;
+      CFG.lora[CHANNEL868MG].pl = p868mg;
+      CFG.lora[CHANNEL868LW].pl = p868lw;
+      snprintf(info, 2*INFOLEN, "INFO: Changed this device's LoRa preamble length to %d, %d, %d, and %d symbols",
+        CFG.lora[CHANNEL433].pl, CFG.lora[CHANNEL868DA].pl, CFG.lora[CHANNEL868MG].pl, CFG.lora[CHANNEL868LW].pl);
       serial_writeln(info);
       setup_radio();
       if (persist_selected_commands) persist_serial_command_for_replay(s);
@@ -731,8 +775,8 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     char buffer[32];
     p1.toCharArray(buffer, 32);
     uint16_t new_value = strtol(buffer, NULL, 10);
-    CFG.beacon_interval[CHANNEL868] = new_value * SECONDS_TO_MILLISECONDS;
-    serial_writeln("INFO: Changed Beacon868 interval to " + p1 + " seconds");
+    CFG.beacon_interval[CHANNEL868DA] = new_value * SECONDS_TO_MILLISECONDS;
+    serial_writeln("INFO: Changed Beacon868DA interval to " + p1 + " seconds");
   }
   else if (s_uppercase.startsWith("SIMRX "))
   { // SIMRX 433 base64here
@@ -741,7 +785,7 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     String p2 = s.substring(10);
 
     int simfreq = p1.toInt();
-    if ((simfreq != 433) && (simfreq != 868))
+    if ((simfreq != 433) && (simfreq != 867) && (simfreq != 868) && (simfreq != 869))
     {
       serial_writeln("ERROR: Check SIMRX syntax");
       return;
@@ -757,7 +801,9 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     if (decoded_length > 0)
     {
       uint8_t channel = CHANNEL433;
-      if (simfreq == 868) channel = CHANNEL868;
+      if (simfreq == 867) channel = CHANNEL868LW;
+      if (simfreq == 868) channel = CHANNEL868MG;
+      if (simfreq == 869) channel = CHANNEL868DA;
       lorapacket_in_sim.available = true;
       lorapacket_in_sim.channel = channel;
       lorapacket_in_sim.rssi = 100;
