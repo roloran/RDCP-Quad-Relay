@@ -32,31 +32,7 @@ struct txqueue {
   uint8_t num_entries = 0;
   struct txqueue_entry entries[MAX_TXQUEUE_ENTRIES];
 };
-  
-/**
-  * Data structure for a TX Ahead Queue entry.
-  */
-struct txaheadqueue_entry {
-  uint8_t payload[RDCP_MAX_PAYLOAD_SIZE];       //< data of the outgoing message
-  uint8_t payload_length = 0;                   //< length of the outgoing message
-  int64_t scheduled_time = RDCP_TIMESTAMP_ZERO; //< timestamp when to move to the TX Queue
-  bool important = false;                       //< message is important and should not be dropped even it if takes longer
-  bool force_tx = false;                        //< indicator whether message should be sent independend of CAD status
-  uint8_t callback_selector = TX_CALLBACK_NONE; //< which callback function to use when TX is finished
-  bool waiting = false;                         //< message is still waiting to be sent
-};
-  
-/// The length of the TX Ahead Queue is kept to a reasonable minimum as this queue is currently not in use
-#define MAX_TXAHEADQUEUE_ENTRIES 2
-  
-/**
-  * Data structure for the overall TX Ahead Queue.
-  */
-struct txaheadqueue {
-  uint8_t num_entries = 0;
-  struct txaheadqueue_entry entries[MAX_TXAHEADQUEUE_ENTRIES];
-};
-
+ 
 /**
   * Add an outgoing RDCP Message to the TX Queue (TXQ).
   * TXQ is used for messages that are up for transmission very soon, unlike the
@@ -94,38 +70,11 @@ struct txaheadqueue {
    * @return true If a message is prepared to be sent now; false if no TX is up ahead.
    */
  bool rdcp_txqueue_loop(void);
- 
- /**
-  * Schedule an outgoing RDCP Message in the "ahead of time" queue.
-  * This is intended for intermediate-term scheduling, like sending a SIGNATURE after a corresponding RDCP Message. 
-  * Periodic retransmissions should not be added to any queue unless the LoRa channel is considered free currently. 
-  * @param channel CHANNEL433 or CHANNEL868[DA|MG|LW]
-  * @param data LoRa packet payload (i.e., RDCP Header + RDCP Payload)
-  * @param len Length of data in bytes 
-  * @param important IMPORTANT if the message must not be dropped, otherwise NOTIMPORTANT 
-  * @param forcetx FORCEDTX if the message has to be sent at its scheduled time, NOTFORCEDTX if it may be re-scheduled 
-  * @param callback_selector Number of the callback to use, e.g., TX_CALLBACK_NONE
-  * @param delay_in_ms Relative monotonic clock timestamp of when to move the message to the TX queue (in milliseconds)
-  * @return true if the message was accepted in the queue, false otherwise (e.g., queue full)
-  */
-bool rdcp_txaheadqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool important, bool force_tx, uint8_t callback_selector, int64_t delay_in_ms);
-
-/**
-  * RDCP TX Ahead Queue Loop to be called implicitly by the TX Queue Loop.
-  * Calling this manually should be used scarcely. 
-  * @return true if a messages was moved to the TX queue, false otherwise
-  */
-bool rdcp_txaheadqueue_loop(void);
-
+  
 /**
  * @return Number of messages currently in the TX Queue. 
  */
 int get_num_txq_entries(uint8_t channel);
-
-/**
- * @return Number of messages currently in the TX Ahead Queue. 
- */
-int get_num_txaq_entries(uint8_t channel);
 
 /**
  * Print the current TX Queue on Serial. 

@@ -14,7 +14,6 @@ extern rdcp_message rdcp_msg_in;
 extern da_config CFG;
 
 txqueue txq[NUMCHANNELS];
-txaheadqueue txaq[NUMCHANNELS];
 
 int tx_ongoing[NUMCHANNELS] = {-1, -1, -1 , -1};      // Index of TXQ entry currently up for transmission
 int64_t tx_process_start[NUMCHANNELS] = {0, 0, 0, 0};
@@ -280,9 +279,6 @@ bool rdcp_txqueue_loop(void)
 
         last_tx_activity[channel] = now;
 
-        /* Feed fresh messages into our queue */
-        rdcp_txaheadqueue_loop();
-
         for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
         {
             if (txq[channel].entries[i].waiting)
@@ -341,79 +337,9 @@ bool rdcp_txqueue_loop(void)
     return result;
 }
 
-bool rdcp_txaheadqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool important, bool force_tx, uint8_t callback_selector, int64_t delay_in_ms)
-{
-    if (txaq[channel].num_entries == MAX_TXAHEADQUEUE_ENTRIES)
-    {
-      serial_writeln("WARNING: rdcp_txaheadqueue_add() failed -- TX Ahead Queue is full");
-      return false;
-    }
-
-    int64_t now = my_millis();
-
-    for (int i=0; i < MAX_TXAHEADQUEUE_ENTRIES; i++)
-    {
-      if (txaq[channel].entries[i].waiting == false)
-      {
-        txaq[channel].num_entries += 1;
-        txaq[channel].entries[i].waiting = true;
-        txaq[channel].entries[i].callback_selector = callback_selector;
-        txaq[channel].entries[i].force_tx = force_tx;
-        txaq[channel].entries[i].important = important;
-        txaq[channel].entries[i].scheduled_time = now + delay_in_ms;
-        txaq[channel].entries[i].payload_length = len;
-        for (int j=0; j < len; j++) txaq[channel].entries[i].payload[j] = data[j];
-
-        char buf[INFOLEN];
-        snprintf(buf, INFOLEN, "INFO: Delayed message scheduled -> TXAQ%di %d, len %d, @%" PRId64, channel, i, len, txaq[channel].entries[i].scheduled_time);
-        serial_writeln(buf);
-
-        return true; // found free spot and added entry, exit loop here.
-      }
-    }
-
-    return false;
-}
-
-bool rdcp_txaheadqueue_loop(void)
-{
-    for (int channel = 0; channel <= 1; channel++) // TODO check channel number handling
-    {
-        if (txq[channel].num_entries == MAX_TXQUEUE_ENTRIES) continue;
-
-        int64_t now = my_millis();
-
-        for (int i=0; i < MAX_TXAHEADQUEUE_ENTRIES; i++)
-        {
-            if ((txaq[channel].entries[i].waiting == true) && (txaq[channel].entries[i].scheduled_time <= now))
-            {
-                if (rdcp_txqueue_add(channel, txaq[channel].entries[i].payload, txaq[channel].entries[i].payload_length,
-                        txaq[channel].entries[i].important, txaq[channel].entries[i].force_tx,
-                        txaq[channel].entries[i].callback_selector, txaq[channel].entries[i].scheduled_time) == true)
-                {
-                    txaq[channel].entries[i].waiting = false;
-                    txaq[channel].num_entries--;
-                    return true;
-                }
-                else
-                { // Moving to TXQ failed, probably full. Try again next time.
-                     continue;
-                }
-            }
-        }
-    }
-
-    return false;
-}
-
 int get_num_txq_entries(uint8_t channel)
 {
     return txq[channel].num_entries;
-}
-
-int get_num_txaq_entries(uint8_t channel)
-{
-    return txaq[channel].num_entries;
 }
 
 void rdcp_dump_txq(uint8_t channel)

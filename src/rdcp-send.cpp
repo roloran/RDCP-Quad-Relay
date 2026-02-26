@@ -12,7 +12,6 @@
 #include "rdcp-callbacks.h"
 
 extern txqueue txq[NUMCHANNELS];
-extern txaheadqueue txaq[NUMCHANNELS];
 extern int tx_ongoing[NUMCHANNELS];
 extern da_config CFG;
 extern int64_t last_tx_activity[NUMCHANNELS];
