@@ -12,6 +12,7 @@
 #include "rdcp-memory.h"
 #include "rdcp-commands.h"
 #include "rdcp-csv.h"
+#include "lorawan-tunnel.h"
 
 lora_message current_lora_message;
 extern rdcp_message rdcp_msg_in;
@@ -31,7 +32,7 @@ void rdcp_handle_incoming_lora_message(void)
     if (current_lora_message.channel == CHANNEL868LW)
     {
         /* LoRa packets received on this channel must be LoRaWAN traffic, not RDCP Messages. */
-        // TODO: Hook to LoRaWAN packet handling for filtering and tunneling
+        lorawan_tunnel_incoming();
         return;
     }
     
@@ -56,10 +57,13 @@ void rdcp_handle_incoming_lora_message(void)
         return;
     }
 
-    // TODO: On selected channels, we can return here to completely ignore certain messages, e.g. Roaming Beacons from other DAs on 868DA.
+    /* Completely ignore selected messages */
+    if (current_lora_message.channel == CHANNEL868DA)
+    {
+        if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ROAMINGBEACON) return;
+    }
 
     /* Update the CFEst since we received an RDCP Message; parameters for 433 MHz propagation cycle tracking only */
-    // TODO: Consider CFEst updates per channel, maybe take more direct control of CHANNEL868DA but consider MGs receiving multiple DAs
     rdcp_update_cfest_in(rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number);
 
     /* Stop any TX events on the current channel as long as it is busy */
@@ -153,7 +157,7 @@ void rdcp_handle_incoming_lora_message(void)
                         // Re-schedule other entries on 868 MHz so we get the ACK out first 
                         rdcp_txqueue_reschedule(CHANNEL868DA, CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
                         rdcp_send_ack_unsigned(CFG.rdcp_address, rdcp_msg_in.header.origin, 
-                                               rdcp_msg_in.header.sequence_number); // TODO: Give MGs time to switch back to DA channel first!!
+                                               rdcp_msg_in.header.sequence_number); 
                     }
 
                     /* Forward the message on the 433 MHz channel unless we are the destination */
@@ -205,9 +209,12 @@ void rdcp_handle_incoming_lora_message(void)
                     */
                     if ((rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT) && 
                         (rdcp_msg_in.header.sender >= RDCP_ADDRESS_MG_LOWERBOUND))
-                    { // was 2* corridor_basetime
-                        rdcp_update_channel_free_estimation(CHANNEL868DA, rdcp_get_channel_free_estimation(CHANNEL868DA) + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
-                        rdcp_txqueue_reschedule(CHANNEL868DA, 0); // re-schedule based on CFEst
+                    { 
+                        int64_t cfest_max = rdcp_get_channel_free_estimation(CHANNEL868DA); 
+                        int64_t now = my_millis();
+                        if (now > cfest_max) cfest_max = now;
+                        rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
+                        rdcp_txqueue_reschedule(CHANNEL868DA, 0);
                     }
                     rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL); // add a delay
                 }

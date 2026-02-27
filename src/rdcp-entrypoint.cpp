@@ -138,6 +138,8 @@ void rdcp_entrypoint_schedule(void)
     return;
 }
 
+extern int64_t most_recent_mg_sender_end;
+
 void rdcp_send_ack_unsigned(uint16_t origin, uint16_t destination, uint16_t seqnr)
 {
     struct rdcp_message rm;
@@ -176,8 +178,13 @@ void rdcp_send_ack_unsigned(uint16_t origin, uint16_t destination, uint16_t seqn
     /* Schedule the crafted message for sending */
     memcpy(&data, &rm.header, RDCP_HEADER_SIZE);
     for (int i=0; i<rm.header.rdcp_payload_length; i++) data[i + RDCP_HEADER_SIZE] = rm.payload.data[i];
+
+    /* ACK needs to be sent after MG has switched back to CHANNEL868DA */
+    int64_t forced_time = most_recent_mg_sender_end;
+    forced_time += 5 * SECONDS_TO_MILLISECONDS;
+
     rdcp_txqueue_add(CHANNEL868DA, data, RDCP_HEADER_SIZE + rm.header.rdcp_payload_length, 
-        IMPORTANT, NOTFORCEDTX, TX_CALLBACK_ACK, TX_WHEN_CF);
+        IMPORTANT, FORCEDTX, TX_CALLBACK_ACK, forced_time);
 
     return;
 }

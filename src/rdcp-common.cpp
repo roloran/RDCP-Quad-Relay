@@ -17,6 +17,7 @@ struct rdcp_dup_table dupe_table;              // One global RDCP Message Duplic
 uint16_t most_recent_airtime = RDCP_TIMESTAMP_ZERO;
 uint8_t  most_recent_future_timeslots = 0;
 int64_t  contributed_propagation_cycle_end = RDCP_TIMESTAMP_ZERO;
+int64_t  most_recent_mg_sender_end = RDCP_TIMESTAMP_ZERO;
 
 tracked_propagation_cycle propagation_cycles[MAX_TRACKED_PCS];
 
@@ -94,6 +95,7 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
   most_recent_future_timeslots = future_timeslots;
 
   rdcp_update_channel_free_estimation(current_lora_message.channel, channel_free_at);
+  if (current_lora_message.channel == CHANNEL868MG) most_recent_mg_sender_end = channel_free_at;
   if (current_lora_message.channel == CHANNEL433) rdcp_track_propagation_cycles(channel_free_at, origin, seqnr, PC_STATUS_KNOWN);
 
   char buf[INFOLEN];

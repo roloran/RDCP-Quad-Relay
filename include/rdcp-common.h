@@ -359,6 +359,7 @@ struct tracked_propagation_cycle {
 #define RDCP_MSGTYPE_RTC                     0x32
 
 #define RDCP_MSGTYPE_TUNNEL                  0x40
+#define RDCP_MSGTYPE_ROAMINGBEACON           0x41
   
 /*
  * Subtypes for OFFICIAL ANNOUNCEMENTs

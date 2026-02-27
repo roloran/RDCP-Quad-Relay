@@ -200,6 +200,16 @@ void setup_lora_hardware(void)
   /* Prepare the single SPI interface */
   vspi.begin(RADIO868DACLK, RADIO868DAMISO, RADIO868DAMOSI, RADIO868DACS);
 
+  /* Disable any chip selects on cold boot */
+  pinMode(RADIO868DACS, OUTPUT);
+  pinMode(RADIO868MGCS, OUTPUT);
+  pinMode(RADIO868LWCS, OUTPUT);
+  pinMode(RADIO433CS, OUTPUT);
+  digitalWrite(RADIO868DACS, HIGH);
+  digitalWrite(RADIO868MGCS, HIGH);
+  digitalWrite(RADIO868LWCS, HIGH);
+  digitalWrite(RADIO433CS, HIGH);
+
   /* 868 MHz DA radio */
   pinMode(RADIO868DARXEN, OUTPUT);
   pinMode(RADIO868DATXEN, OUTPUT);
@@ -247,7 +257,7 @@ void setup_lora_hardware(void)
   {
     serial_writeln("INIT: SX1262 (868 MHz LW) hardware initialized successfully.");
     hasRadio868lw = true;
-    CFG.lora[CHANNEL868MG].freq = 868.1;
+    CFG.lora[CHANNEL868LW].freq = 868.1;
   } 
   else 
   {

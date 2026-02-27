@@ -94,8 +94,9 @@ void print_rdcp_csv(void)
     refnr = rdcp_msg_in.payload.data[0] + 256 * rdcp_msg_in.payload.data[1];
   }
 
-  snprintf(info, 2*INFOLEN, "RDCPCSV: %04X-CH%s,%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%d,%04X,%d,%04X,%04X,%04X,%04X,%02X,%d,%02X,%02X,%02X,%04X,%d,%3.3f,%.2f,%.2f", 
-    CFG.rdcp_address, current_lora_message.channel,
+  snprintf(info, 2*INFOLEN, "RDCPCSV: %04X-CH%d,%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%d,%04X,%d,%04X,%04X,%04X,%04X,%02X,%d,%02X,%02X,%02X,%04X,%d,%3.3f,%.2f,%.2f", 
+    CFG.rdcp_address, 
+    current_lora_message.channel,
     now - last_csv_timestamp[current_lora_message.channel],
     now, 
     CFEst[current_lora_message.channel],

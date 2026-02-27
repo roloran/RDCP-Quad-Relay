@@ -10,6 +10,7 @@
 #include "rdcp-scheduler.h"
 #include <BleSerial.h> 
 #include "rdcp-csv.h"
+#include "lorawan-tunnel.h"
 // #include <Preferences.h>
 
 lora_message lorapacket_in_sim;
@@ -910,6 +911,28 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     DART.battery2 = bat2; 
     snprintf(info, INFOLEN, "INFO: Update reportable battery status to %d and %d", DART.battery1, DART.battery2);
     serial_writeln(info);
+  }
+  else if (s_uppercase.startsWith("TUNNEL ADD "))
+  { // TUNNEL ADD 12345678
+    // 012345678901234567890
+    String p1 = s.substring(11);
+    char b1[32];
+    p1.toCharArray(b1, 32);
+    uint32_t devaddr = (uint32_t) strtol(b1, NULL, 16);
+    lorawan_tunnel_device_add(devaddr);
+  }
+  else if (s_uppercase.startsWith("TUNNEL DEL "))
+  { // TUNNEL DEL 12345678
+    // 012345678901234567890
+    String p1 = s.substring(11);
+    char b1[32];
+    p1.toCharArray(b1, 32);
+    uint32_t devaddr = (uint32_t) strtol(b1, NULL, 16);
+    lorawan_tunnel_device_remove(devaddr);
+  }
+  else if (s_uppercase.startsWith("TUNNEL CLEAR"))
+  { 
+    lorawan_tunnel_device_clear();
   }
   else
   {

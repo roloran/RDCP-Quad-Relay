@@ -13,7 +13,7 @@ extern lora_message current_lora_message;
 extern rdcp_message rdcp_msg_in;
 extern da_config CFG;
 
-txqueue txq[NUMCHANNELS];
+txqueue txq[NUMCHANNELSTXQ];
 
 int tx_ongoing[NUMCHANNELS] = {-1, -1, -1 , -1};      // Index of TXQ entry currently up for transmission
 int64_t tx_process_start[NUMCHANNELS] = {0, 0, 0, 0};
@@ -22,6 +22,12 @@ int64_t last_tx_activity[NUMCHANNELS] = {0, 0, 0, 0};
 
 bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool important, bool force_tx, uint8_t callback_selector, int64_t forced_time)
 {
+    if (channel >= NUMCHANNELSTXQ)
+    {
+      serial_writeln("ERROR: Channel is not intended for sending and has no TX Queue, refusing");
+      return false;
+    }
+
     if (txq[channel].num_entries == MAX_TXQUEUE_ENTRIES)
     {
       serial_writeln("WARNING: rdcp_txqueue_add() failed -- TX Queue is full");
@@ -89,6 +95,8 @@ bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool importan
 
 bool rdcp_txqueue_reschedule(uint8_t channel, int64_t offset)
 {
+    if (channel >= NUMCHANNELSTXQ) return false;
+
     char info[INFOLEN];
     int64_t now = my_millis();
     int64_t cfest = rdcp_get_channel_free_estimation(channel);
@@ -187,7 +195,7 @@ void rdcp_txqueue_compress(void)
 {
   int64_t now = my_millis();
 
-  for (int channel=0; channel <= 1; channel++) // TODO check channel handling
+  for (int channel=0; channel < NUMCHANNELSTXQ; channel++) 
   {
     if (now > rdcp_get_channel_free_estimation(channel) + 2 * MINUTES_TO_MILLISECONDS)
     { /* Channel is unused for more than two minutes; check whether we have something to send earlier. */
@@ -237,6 +245,7 @@ void rdcp_txqueue_compress(void)
 
 bool rdcp_txqueue_has_forced_entry(uint8_t channel)
 {
+  if (channel >= NUMCHANNELSTXQ) return false;
   for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
   {
     if (txq[channel].entries[i].waiting)
@@ -261,7 +270,7 @@ bool rdcp_txqueue_loop(void)
 
     rdcp_txqueue_compress();
 
-    for (int channel=0; channel <= 1; channel++) // TODO check channel number handling
+    for (int channel=0; channel < NUMCHANNELSTXQ; channel++)
     {
         /* Skip if any transmission is already ongoing */
         if (tx_ongoing[channel] != -1)
@@ -339,11 +348,13 @@ bool rdcp_txqueue_loop(void)
 
 int get_num_txq_entries(uint8_t channel)
 {
+    if (channel >= NUMCHANNELSTXQ) return 0;
     return txq[channel].num_entries;
 }
 
 void rdcp_dump_txq(uint8_t channel)
 {
+  if (channel >= NUMCHANNELSTXQ) return;
   int64_t now = my_millis();
   char info[INFOLEN];
   snprintf(info, INFOLEN, "INFO: Listing TXQ%d @ %" PRId64 " ms", channel, now);
@@ -382,6 +393,7 @@ void rdcp_dump_txq(uint8_t channel)
 
 void rdcp_reschedule_on_busy_channel(uint8_t channel)
 {
+  if (channel >= NUMCHANNELSTXQ) return;
   for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++) txq[channel].entries[i].cad_retry = 0;
   if (tx_ongoing[channel] != -1)
   {

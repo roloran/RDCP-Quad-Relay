@@ -56,6 +56,7 @@
 #define CHANNEL868MG    2
 #define CHANNEL868LW    3
 #define NUMCHANNELS     4
+#define NUMCHANNELSTXQ  2
 
 #define NO_CHANNEL      99
 

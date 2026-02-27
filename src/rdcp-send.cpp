@@ -11,7 +11,7 @@
 #include "Base64ren.h"
 #include "rdcp-callbacks.h"
 
-extern txqueue txq[NUMCHANNELS];
+extern txqueue txq[NUMCHANNELSTXQ];
 extern int tx_ongoing[NUMCHANNELS];
 extern da_config CFG;
 extern int64_t last_tx_activity[NUMCHANNELS];
@@ -22,6 +22,7 @@ int64_t tx_latency[NUMCHANNELS];
 
 void rdcp_queue_postpone_for_retransmission(uint8_t channel, int highlander, int64_t notbefore)
 {
+    if (channel >= NUMCHANNELSTXQ) return;
     char info[INFOLEN];
     for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
     {
@@ -49,6 +50,7 @@ void rdcp_send_message_cad(uint8_t channel)
 
 void rdcp_send_message_force(uint8_t channel)
 {
+    if (channel >= NUMCHANNELSTXQ) return;
     int64_t now = my_millis();
     int64_t timediff = now - 
                        txq[channel].entries[tx_ongoing[channel]].originally_scheduled_time - 
@@ -101,6 +103,7 @@ void rdcp_send_message_force(uint8_t channel)
 
 void rdcp_callback_txfin(uint8_t channel)
 {
+    if (channel >= NUMCHANNELSTXQ) return;
     char buf[INFOLEN];
 
     last_tx_activity[channel] = my_millis();
@@ -203,6 +206,7 @@ void rdcp_callback_txfin(uint8_t channel)
 
 bool rdcp_callback_cad(uint8_t channel, bool cad_busy)
 {
+    if (channel >= NUMCHANNELSTXQ) return false;
     bool channel_free = !cad_busy;
     char buf[INFOLEN];
   
