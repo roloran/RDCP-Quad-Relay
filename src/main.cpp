@@ -17,6 +17,7 @@
 #include "rdcp-callbacks.h"
 #include "rdcp-commands.h"
 #include "rdcp-beacon.h"
+#include "rdcp-roaming-support.h"
 
 SET_LOOP_TASK_STACK_SIZE(STACK16K); // default of 8 kb is not enough
 
@@ -164,6 +165,7 @@ void loop()
 
     rdcp_check_heartbeat();    // Check whether we should send a DA Heartbeat
     rdcp_periodic_kickstart(); // Check whether we should start a periodic868 chain
+    roaming_support_check_and_send_beacon(); // Check whether we should send a roaming beacon
 
     minute_counter++;
     if (minute_counter == 2)

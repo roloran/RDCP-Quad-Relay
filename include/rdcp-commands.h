@@ -55,5 +55,10 @@ struct rtc_entry {
  */
 void rdcp_cmd_check_rtc(void);
 
+/**
+ * Send a roaming beacon.
+ */
+void rdcp_send_roaming_beacon(void);
+
 #endif 
 /* EOF */

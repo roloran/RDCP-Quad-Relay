@@ -10,6 +10,7 @@
 #include "rdcp-scheduler.h"
 #include "Base64ren.h"
 #include "rdcp-callbacks.h"
+#include "rdcp-roaming-support.h"
 
 extern txqueue txq[NUMCHANNELSTXQ];
 extern int tx_ongoing[NUMCHANNELS];
@@ -105,6 +106,8 @@ void rdcp_callback_txfin(uint8_t channel)
 {
     if (channel >= NUMCHANNELSTXQ) return;
     char buf[INFOLEN];
+
+    if (channel == CHANNEL868DA) roaming_support_register_own_tx();
 
     last_tx_activity[channel] = my_millis();
     int num_waiting = -1;

@@ -106,6 +106,21 @@ void rdcp_pass_response_to_scheduler(uint8_t channel, bool no_larger_delay=false
     return;
 }
 
+void rdcp_send_roaming_beacon(void)
+{
+    serial_writeln("INFO: Scheduling CHANNEL868DA Roaming Beacon");
+    rdcp_response.header.destination = RDCP_BROADCAST_ADDRESS;
+    rdcp_response.header.message_type = RDCP_MSGTYPE_ROAMINGBEACON;
+    rdcp_response.header.rdcp_payload_length = COUNT_ZERO;
+    rdcp_response.header.sequence_number = RDCP_SEQUENCENR_SPECIAL_ZERO;
+    rdcp_response.header.relay1 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    rdcp_prepare_response_header(true);
+    rdcp_pass_response_to_scheduler(CHANNEL868DA);
+    return;
+}
+
 /**
  * When we received a PING, respond with a PONG.
  */

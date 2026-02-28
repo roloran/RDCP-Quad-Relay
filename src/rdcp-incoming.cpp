@@ -13,6 +13,7 @@
 #include "rdcp-commands.h"
 #include "rdcp-csv.h"
 #include "lorawan-tunnel.h"
+#include "rdcp-roaming-support.h"
 
 lora_message current_lora_message;
 extern rdcp_message rdcp_msg_in;
@@ -60,7 +61,14 @@ void rdcp_handle_incoming_lora_message(void)
     /* Completely ignore selected messages */
     if (current_lora_message.channel == CHANNEL868DA)
     {
-        if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ROAMINGBEACON) return;
+        /* Ignore Roaming Beacons sent by other DAs on CHANNEL868DA */
+        if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ROAMINGBEACON)
+        {
+            if ((rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND) && (rdcp_msg_in.header.origin < RDCP_ADDRESS_MG_LOWERBOUND))
+            {
+                return;
+            }
+        } 
     }
 
     /* Update the CFEst since we received an RDCP Message; parameters for 433 MHz propagation cycle tracking only */
@@ -119,6 +127,7 @@ void rdcp_handle_incoming_lora_message(void)
             latest_refnr = rdcp_msg_in.payload.data[0] + 256 * rdcp_msg_in.payload.data[1];
             roamingrec   = rdcp_msg_in.payload.data[2] + 256 * rdcp_msg_in.payload.data[3];
         }
+        roaming_support_register_mg_heartbeat();
     }
     rdcp_neighbor_register_rx(current_lora_message.channel, rdcp_msg_in.header.sender, 
                               current_lora_message.rssi, current_lora_message.snr, 
