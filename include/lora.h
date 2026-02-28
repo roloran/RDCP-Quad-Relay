@@ -48,6 +48,9 @@
 #define RADIO433TXEN    21
 #define RADIO433RXEN     2
 
+#define SERIAL1TX       43
+#define SERIAL1RX       44
+
 /**
  * LoRa-specific constants used globally 
  */
