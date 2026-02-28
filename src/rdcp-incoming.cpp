@@ -71,6 +71,25 @@ void rdcp_handle_incoming_lora_message(void)
         } 
     }
 
+    /* Check for Red CIRE Button activity */
+    if (CFG.my_cire_button > RDCP_ADDRESS_SPECIAL_ZERO)
+    if ((rdcp_msg_in.header.origin == CFG.my_cire_button) || (rdcp_msg_in.header.destination == CFG.my_cire_button))
+    {
+        if ((rdcp_msg_in.header.origin == CFG.my_cire_button) && (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT))
+        {
+            serial_writeln("INFO: Red CIRE Button associated with this MERLIN-Base has sent a CIRE!");
+            serial_writeln("DA_CIREBUTTON_PRESSED");
+        }
+        if ((rdcp_msg_in.header.destination == CFG.my_cire_button) && (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK))
+        {
+            if (rdcp_msg_in.header.origin <= RDCP_HQ_MULTICAST_ADDRESS)
+            {
+                serial_writeln("INFO: Red CIRE Button associated with this MERLIN-Base has received an ACK from HQ!");
+                serial_writeln("DA_CIREBUTTON_HQACK");
+            }
+        }
+    }
+
     /* Update the CFEst since we received an RDCP Message; parameters for 433 MHz propagation cycle tracking only */
     rdcp_update_cfest_in(rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number);
 

@@ -109,6 +109,7 @@ struct da_config {
     uint16_t corridor_basetime            = 10;                   /// seconds to keep channel free for ACKs when hearing CIREs, own basetime, 1-2x for other DAs
     uint8_t  sf_multiplier                = 1;                    /// factor for random delays, 1 for SF7
     uint64_t unsolicited_dasrep_timer     = 180 * MINUTES_TO_MILLISECONDS;   /// Send unsolicited DA Status Reponse if no Status Request received
+    uint16_t my_cire_button               = 0x0000;               /// RDCP Address of Red CIRE Button attached to this MERLIN-Basis
 };
 
 #define MAX_LORA_PAYLOAD_SIZE 250

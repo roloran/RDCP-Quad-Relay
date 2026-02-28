@@ -63,6 +63,10 @@ Additional commands:
 - `CORRIDOR 60` sets the corridor basetime in seconds, i.e., how long to keep the channel free when hearing `CIRE` messages. Used for legacy MGs only.
 - `RDCPSFMUL 1` sets the spreading-factor-based time multiplier, e.g., 1 for SF7 and 10 for SF12.
 - `RDCPSEQNR 1234` sets this device's most recently used RDCP Sequence Number, e.g., after replacing the ESP32 hardware.
+- `REDBUTTON 1234` sets the RDCP address of the Red CIRE Button associated with this MERLIN-Base.
+- `TUNNEL ADD 12345678` adds a LoRaWAN device to MT 0x40 tunneling.
+- `TUNNEL DEL 12345678` removes a LoRaWAN device from tunneling.
+- `TUNNNEL CLEAR` deleted all LoRaWAN tunnel device entries.
 
 ## Interface to interactive DAs
 
@@ -80,6 +84,8 @@ The following notifications are sent to the DA:
 - `DA_INFRASTRUCTURE_RESET` when the whole RDCP infrastructure is reset.
 - `DA_CIRESENT` when the TX callback for a CIRE is triggered.
 - `DA_FETCHTIMEOUT` when no delivery receipt was received for an own memory fetch request.
+- `DA_CIREBUTTON_PRESSED` when a CIRE was received from the associated Red CIRE Button.
+- `DA_CIREBUTTON_HQACK` when an ACK from HQ to the associated Red CIRE Button was received.
 
 DAs are expected to use the following serial commands for interaction with the relay:
 

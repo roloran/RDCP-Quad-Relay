@@ -462,6 +462,17 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     serial_writeln(info);
     if (persist_selected_commands) persist_serial_command_for_replay(s);
   }
+  else if (s_uppercase.startsWith("REDBUTTON "))
+  {
+    String p1 = s.substring(10);
+    char buffer[32];
+    p1.toCharArray(buffer, 32);
+    uint16_t new_rdcp_address = strtol(buffer, NULL, 16);
+    CFG.my_cire_button = new_rdcp_address;
+    snprintf(info, INFOLEN, "INFO: Changed this device's Red CIRE Button RDCP address to %04X", CFG.my_cire_button);
+    serial_writeln(info);
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
+  }
   else if (s_uppercase.startsWith("RDCPRLID "))
   { // RDCPRLID 0
     // Sets own relay identified to 0 ; single-hex-digit required
@@ -920,6 +931,7 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     p1.toCharArray(b1, 32);
     uint32_t devaddr = (uint32_t) strtol(b1, NULL, 16);
     lorawan_tunnel_device_add(devaddr);
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
   }
   else if (s_uppercase.startsWith("TUNNEL DEL "))
   { // TUNNEL DEL 12345678
@@ -929,10 +941,12 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     p1.toCharArray(b1, 32);
     uint32_t devaddr = (uint32_t) strtol(b1, NULL, 16);
     lorawan_tunnel_device_remove(devaddr);
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
   }
   else if (s_uppercase.startsWith("TUNNEL CLEAR"))
   { 
     lorawan_tunnel_device_clear();
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
   }
   else
   {
