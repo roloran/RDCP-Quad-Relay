@@ -461,7 +461,7 @@ bool setup_radio(void)
     }
     if (radio868da.setSyncWord(CFG.lora[CHANNEL868DA].sw) != RADIOLIB_ERR_NONE)
     {
-      serial_writeln("ERROR: Unable to set LoRa sync word 868!");
+      serial_writeln("ERROR: Unable to set LoRa sync word 868 DA!");
       return false;
     }
     if (radio868da.setOutputPower(CFG.lora[CHANNEL868DA].pw) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
@@ -529,7 +529,7 @@ bool setup_radio(void)
     }
     if (radio868mg.setSyncWord(CFG.lora[CHANNEL868MG].sw) != RADIOLIB_ERR_NONE)
     {
-      serial_writeln("ERROR: Unable to set LoRa sync word 868!");
+      serial_writeln("ERROR: Unable to set LoRa sync word 868 MG!");
       return false;
     }
     if (radio868mg.setOutputPower(CFG.lora[CHANNEL868MG].pw) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
@@ -597,7 +597,7 @@ bool setup_radio(void)
     }
     if (radio868lw.setSyncWord(CFG.lora[CHANNEL868LW].sw) != RADIOLIB_ERR_NONE)
     {
-      serial_writeln("ERROR: Unable to set LoRa sync word 868!");
+      serial_writeln("ERROR: Unable to set LoRa sync word 868 LW!");
       return false;
     }
     if (radio868lw.setOutputPower(CFG.lora[CHANNEL868LW].pw) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
