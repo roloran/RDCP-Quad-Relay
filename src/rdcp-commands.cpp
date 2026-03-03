@@ -100,6 +100,12 @@ void rdcp_pass_response_to_scheduler(uint8_t channel, bool no_larger_delay=false
         if (channel == CHANNEL868DA) my_delay -= 4 * SECONDS_TO_MILLISECONDS; // allow for 433 MHz headstart
     }
 
+    /* Get Roaming Beacons out early as longer delays may defeat their purpose */
+    if (rdcp_response.header.message_type == RDCP_MSGTYPE_ROAMINGBEACON)
+    {
+        my_delay = -100 * (1 + CFG.relay_identifier);
+    }
+
     rdcp_txqueue_add(channel, data_for_scheduler, RDCP_HEADER_SIZE + rdcp_response.header.rdcp_payload_length,
       NOTIMPORTANT, NOFORCEDTX, TX_CALLBACK_NONE, my_delay);
 
