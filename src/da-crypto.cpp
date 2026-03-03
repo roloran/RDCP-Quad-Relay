@@ -5,6 +5,9 @@
 
 SchnorrSigCtx ssc;
 bool ssc_initialized = false;
+SchnorrSigVerify ssv = SchnorrSigVerify();
+bool ssv_initialized = false;
+struct SchnorrSigCtx::signature sig;
 
 extern da_config CFG; 
 
@@ -81,20 +84,23 @@ int schnorr_create_signature(uint8_t *data, uint8_t datalen, uint8_t *targetbuff
 
 bool schnorr_verify_signature(uint8_t *data, uint8_t datalen, uint8_t *signature)
 {
+  int res; 
+
   schnorr_init_ctx();
 
-  SchnorrSigVerify ssv = SchnorrSigVerify();
-  int res = ssv.init(&ssc, CFG.hqpubkey);
-                               
-  if (res != RESULT_OK)
+  if (!ssv_initialized)
   {
-    char msg[INFOLEN];
-    snprintf(msg, INFOLEN, "ERROR: schnorr_verify_signature() could not initialize (res %d) with HQ public key %s", res, CFG.hqpubkey);
-    serial_writeln(msg);
-    return false;
+    res = ssv.init(&ssc, CFG.hqpubkey);                             
+    if (res != RESULT_OK)
+    {
+      char msg[INFOLEN];
+      snprintf(msg, INFOLEN, "ERROR: schnorr_verify_signature() could not initialize (res %d) with HQ public key %s", res, CFG.hqpubkey);
+      serial_writeln(msg);
+      return false;
+    }
+    ssv_initialized = true;
   }
 
-  struct SchnorrSigCtx::signature sig;
   sig.point_len = POINT_LEN;
   for (int i=0; i<POINT_LEN; i++) sig.point[i] = signature[i];
   sig.sig_len = SIG_LEN;
