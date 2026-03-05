@@ -104,6 +104,9 @@ void rdcp_handle_incoming_lora_message(void)
     /* RDCPCSV output */
     print_rdcp_csv();
 
+    /* TXQueue clean-up */
+    rdcp_txqueue_clean();
+
     /* Check the RDCP Message duplicate status */
     bool duplicate = rdcp_check_duplicate_message(rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number);
 

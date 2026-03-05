@@ -95,5 +95,10 @@ void rdcp_reschedule_on_busy_channel(uint8_t channel);
  */
 bool rdcp_txqueue_has_forced_entry(uint8_t channel);
 
+/**
+ * TXQueue housekeeping: Drop unimportant messages when an important one was received.
+ */
+void rdcp_txqueue_clean(void);
+
 #endif 
 /* EOF */

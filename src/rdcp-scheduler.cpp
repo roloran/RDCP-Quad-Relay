@@ -20,6 +20,53 @@ int64_t tx_process_start[NUMCHANNELS] = {0, 0, 0, 0};
 int retransmission_count[NUMCHANNELS] = {0, 0, 0, 0};
 int64_t last_tx_activity[NUMCHANNELS] = {0, 0, 0, 0};
 
+void rdcp_txqueue_clean(void)
+{
+  /* Clean the TX Queue only if certain message types were received */
+  if ((rdcp_msg_in.header.message_type != RDCP_MSGTYPE_ACK) && 
+      (rdcp_msg_in.header.message_type != RDCP_MSGTYPE_CITIZEN_REPORT) &&
+      (rdcp_msg_in.header.message_type != RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT) &&
+      (rdcp_msg_in.header.message_type != RDCP_MSGTYPE_SIGNATURE) &&
+      (rdcp_msg_in.header.message_type != RDCP_MSGTYPE_INFRASTRUCTURE_RESET) &&
+      (rdcp_msg_in.header.message_type != RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS)) return;
+
+  struct rdcp_message rm;
+  char clean_info[INFOLEN];
+
+  for (int channel=COUNT_ZERO; channel < NUMCHANNELSTXQ; channel++)
+  {
+    for (int i=COUNT_ZERO; i < MAX_TXQUEUE_ENTRIES; i++)
+    {
+      if (txq[channel].entries[i].waiting == false) continue; // free slot, nothing to do
+      if (txq[channel].entries[i].in_process == true) continue; // in process already, don't delete mid-way
+      // if (txq[channel].entries[i].important == true) continue; // explicitly ignored as flag does not match clean-up rules
+
+      memcpy(&rm.header, txq[channel].entries[i].payload, RDCP_HEADER_SIZE);
+
+      if ((rm.header.message_type != RDCP_MSGTYPE_ACK) && 
+          (rm.header.message_type != RDCP_MSGTYPE_CITIZEN_REPORT) &&
+          (rm.header.message_type != RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT) &&
+          (rm.header.message_type != RDCP_MSGTYPE_SIGNATURE) &&
+          (rm.header.message_type != RDCP_MSGTYPE_INFRASTRUCTURE_RESET) &&
+          (rm.header.message_type != RDCP_MSGTYPE_DEVICE_RESET) &&
+          (rm.header.message_type != RDCP_MSGTYPE_DEVICE_REBOOT) &&
+          (rm.header.message_type != RDCP_MSGTYPE_RTC) &&
+          (rm.header.message_type != RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS))
+      {
+        snprintf(clean_info, INFOLEN, "INFO: Dropping TXQ%d entry %d (MT 0x%02X) to prioritize urgent message",
+          channel, i, rm.header.message_type);
+        serial_writeln(clean_info);
+
+        txq[channel].entries[i].waiting = false;
+        txq[channel].entries[i].payload_length = 0;
+        txq[channel].num_entries--;
+      }
+    }
+  }
+
+  return;
+}
+
 bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool important, bool force_tx, uint8_t callback_selector, int64_t forced_time)
 {
     if (channel >= NUMCHANNELSTXQ)
