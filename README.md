@@ -86,6 +86,7 @@ The following notifications are sent to the DA:
 - `DA_FETCHTIMEOUT` when no delivery receipt was received for an own memory fetch request.
 - `DA_CIREBUTTON_PRESSED` when a CIRE was received from the associated Red CIRE Button.
 - `DA_CIREBUTTON_HQACK` when an ACK from HQ to the associated Red CIRE Button was received.
+- `DA_LOCALBUTTON` indicates that the local button for system tests has been pressed.
 
 DAs are expected to use the following serial commands for interaction with the relay:
 

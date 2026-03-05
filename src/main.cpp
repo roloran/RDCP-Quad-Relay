@@ -18,6 +18,7 @@
 #include "rdcp-commands.h"
 #include "rdcp-beacon.h"
 #include "rdcp-roaming-support.h"
+#include "rdcp-localbutton.h"
 
 SET_LOOP_TASK_STACK_SIZE(STACK16K); // default of 8 kb is not enough
 
@@ -214,6 +215,7 @@ void loop()
 
   if (rtc_active) rdcp_cmd_check_rtc();
   rdcp_beacon();
+  local_button_check(); // check whether the local system test button has been pressed
 
   delay(MINIMUM_DELAY); // for background tasks such as watchdogs
 
