@@ -127,4 +127,62 @@ void print_rdcp_csv(void)
   return;
 }
 
+#include "rdcp-scheduler.h"
+extern txqueue txq[NUMCHANNELSTXQ];
+extern int tx_ongoing[NUMCHANNELS];
+
+void print_rdcp_csv_out(uint8_t channel, int txqidx)
+{
+  struct rdcp_message rm;
+  memcpy(&rm.header, txq[channel].entries[tx_ongoing[channel]].payload, RDCP_HEADER_SIZE);
+  for (int i=0; i < rm.header.rdcp_payload_length; i++) 
+    rm.payload.data[i] = txq[channel].entries[tx_ongoing[channel]].payload[RDCP_HEADER_SIZE + i];
+
+  int64_t now = my_millis();
+  char info[2*INFOLEN];
+
+  uint16_t refnr = RDCP_OA_REFNR_SPECIAL_ZERO;
+  if (rm.header.message_type == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT) // does not exlude private OAs yet
+  {
+    refnr = rm.payload.data[1] + 256 * rm.payload.data[2];
+  }
+  else if (rm.header.message_type == RDCP_MSGTYPE_SIGNATURE)
+  {
+    refnr = rm.payload.data[0] + 256 * rm.payload.data[1];
+  }
+
+  snprintf(info, 2*INFOLEN, "RDCPCSV: %04X-CH%d,%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 ",%d,%04X,%d,%04X,%04X,%04X,%04X,%02X,%d,%02X,%02X,%02X,%04X,%d,%3.3f,%.2f,%.2f", 
+    CFG.rdcp_address, 
+    channel,
+    now - last_csv_timestamp[channel],
+    now, 
+    CFEst[channel],
+    CFEst[channel] - now,
+    rm.header.rdcp_payload_length + RDCP_HEADER_SIZE,
+    refnr,
+    most_recent_future_timeslots, // ?
+    rm.header.sender,
+    rm.header.origin,
+    rm.header.sequence_number,
+    rm.header.destination,
+    rm.header.message_type,
+    rm.header.counter,
+    rm.header.relay1,
+    rm.header.relay2,
+    rm.header.relay3,
+    rm.header.checksum,
+    most_recent_airtime, // ?
+    CFG.lora[channel].freq,
+    0.0,
+    0.0
+  );
+
+  serial_writeln(info);
+  rdcpcsv_logfile_append(info);
+
+  last_csv_timestamp[current_lora_message.channel] = now;
+  return;
+
+}
+
 /* EOF */

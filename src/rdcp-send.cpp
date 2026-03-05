@@ -10,6 +10,7 @@
 #include "rdcp-scheduler.h"
 #include "Base64ren.h"
 #include "rdcp-callbacks.h"
+#include "rdcp-csv.h"
 #include "rdcp-roaming-support.h"
 
 extern txqueue txq[NUMCHANNELSTXQ];
@@ -120,6 +121,8 @@ void rdcp_callback_txfin(uint8_t channel)
         rm.payload.data[i] = txq[channel].entries[tx_ongoing[channel]].payload[RDCP_HEADER_SIZE + i];
     num_retransmissions = rm.header.counter;
   
+    print_rdcp_csv_out(channel, tx_ongoing[channel]);
+
     snprintf(buf, INFOLEN, "INFO: TXFIN 4 TXQ%di %d, %d retransmissions ahead, %d/%d more messages waiting", 
         channel, tx_ongoing[channel], num_retransmissions, num_waiting, txq[channel].num_entries);
     serial_writeln(buf);

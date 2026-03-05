@@ -239,7 +239,7 @@ void setup_lora_hardware(void)
   {
     serial_writeln("INIT: SX1262 (868 MHz MG) hardware initialized successfully.");
     hasRadio868mg = true;
-    CFG.lora[CHANNEL868MG].freq = 869.0;
+    CFG.lora[CHANNEL868MG].freq = 869.900;
   } 
   else 
   {

@@ -4,6 +4,7 @@
  * Print an RDCPCSV line for the most recent message.
  */
 void print_rdcp_csv(void);
+void print_rdcp_csv_out(uint8_t channel, int txqidx);
 
 /**
  * Enable or disable RDCPCSV logging.
