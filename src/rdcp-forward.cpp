@@ -101,6 +101,7 @@ void rdcp_forward_schedule(int add_random_delay)
             (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK) || 
             (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT) || 
             (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_SIGNATURE) || 
+            (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT) || 
             (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_DEVICE_REBOOT) || 
             (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_MAINTENANCE) 
         )

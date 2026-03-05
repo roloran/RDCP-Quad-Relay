@@ -181,7 +181,7 @@ void rdcp_send_ack_unsigned(uint16_t origin, uint16_t destination, uint16_t seqn
 
     /* ACK needs to be sent after MG has switched back to CHANNEL868DA */
     int64_t forced_time = most_recent_mg_sender_end;
-    forced_time += 5 * SECONDS_TO_MILLISECONDS;
+    forced_time += 3 * SECONDS_TO_MILLISECONDS;
 
     rdcp_txqueue_add(CHANNEL868DA, data, RDCP_HEADER_SIZE + rm.header.rdcp_payload_length, 
         IMPORTANT, FORCEDTX, TX_CALLBACK_ACK, forced_time);

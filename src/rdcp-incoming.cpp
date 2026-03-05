@@ -25,6 +25,7 @@ uint16_t last_origin[NUMCHANNELS] = { RDCP_ADDRESS_SPECIAL_ZERO, RDCP_ADDRESS_SP
 uint16_t last_seqnr[NUMCHANNELS]  = { RDCP_SEQUENCENR_SPECIAL_ZERO, RDCP_SEQUENCENR_SPECIAL_ZERO, RDCP_SEQUENCENR_SPECIAL_ZERO, RDCP_SEQUENCENR_SPECIAL_ZERO };
 bool currently_in_fetch_mode = false;
 char serial_info[INFOLEN];
+extern int64_t last_heartbeat_sent;
 
 void rdcp_handle_incoming_lora_message(void)
 {
@@ -252,10 +253,21 @@ void rdcp_handle_incoming_lora_message(void)
                 else if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_HEARTBEAT)
                 { // Forward Heartbeats only if their origin is another DA, not an MG
                     if ((rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND) &&
-                        (rdcp_msg_in.header.origin <= RDCP_ADDRESS_MG_LOWERBOUND)) 
+                        (rdcp_msg_in.header.origin < RDCP_ADDRESS_MG_LOWERBOUND)) 
                         rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL); // add a delay
                 }
                 if (rdcp_check_forward_da_relevance()) rdcp_msg_to_da_via_serial();
+
+                /* 
+                    If we hear a DA sending an ACK, consider a full CIRE-ACK-loop in progress 
+                    and avoid sending trivial messages such as Heartbeats.
+                */
+                if ((rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND) &&
+                    (rdcp_msg_in.header.origin < RDCP_ADDRESS_MG_LOWERBOUND) && 
+                    (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK))
+                {
+                    last_heartbeat_sent += 10 * MINUTES_TO_MILLISECONDS;
+                }
             }
         }
 
