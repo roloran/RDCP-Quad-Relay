@@ -954,6 +954,10 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     lorawan_tunnel_device_clear();
     if (persist_selected_commands) persist_serial_command_for_replay(s);
   }
+  else if (s_uppercase.startsWith("TUNNEL LIST"))
+  { 
+    lorawan_tunnel_device_list();
+  }
   else
   {
     if (s_uppercase.length() > 0) serial_writeln("WARNING: Unknown command");

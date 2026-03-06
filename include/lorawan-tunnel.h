@@ -32,6 +32,8 @@ struct tunnel_entry
 #define MAX_TUNNEL_ENTRIES 32
 #define MIN_TUNNEL_INTERVAL 30 * 60 * 1000
 
+void lorawan_tunnel_device_list(void);
+
 #endif 
 
 /* EOF */

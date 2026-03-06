@@ -137,6 +137,20 @@ void lorawan_tunnel_device_remove(uint32_t devaddr)
   return;
 }
 
+void lorawan_tunnel_device_list(void)
+{
+  for (int i=0; i<MAX_TUNNEL_ENTRIES; i++)
+  {
+    if (tunnel_entries[i].devaddr != 0)
+    {
+      snprintf(lwt_info, INFOLEN, "INFO: LoRaWAN device %08X, last tunneled: %" PRId64, tunnel_entries[i].devaddr, tunnel_entries[i].last_tunneled);
+      serial_writeln(lwt_info);
+    }
+  }
+
+  return;
+}
+
 void lorawan_tunnel_device_clear(void)
 {
   for (int i=0; i<MAX_TUNNEL_ENTRIES; i++)
@@ -189,7 +203,12 @@ void lorawan_tunnel_incoming(void)
 
   if (last_tunneled == -1) return; // not in list
   int64_t now = my_millis();
-  if (now - last_tunneled < MIN_TUNNEL_INTERVAL) return; // too often
+  if (now - last_tunneled < MIN_TUNNEL_INTERVAL)
+  { 
+    snprintf(lwt_info, INFOLEN, "INFO: LoRaWAN packet by device %08X received too soon after last tunneled packet, skipping", devaddr);
+    serial_writeln(lwt_info);
+    return; // too often
+  }
   if (current_lora_message.payload_length > 182)
   {
     serial_writeln("WARNING: LoRa packet too large to be tunneled, skipping");
