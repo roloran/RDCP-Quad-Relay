@@ -62,8 +62,9 @@ void rdcp_handle_incoming_lora_message(void)
     /* Completely ignore selected messages */
     if (current_lora_message.channel == CHANNEL868DA)
     {
-        /* Ignore Roaming Beacons sent by other DAs on CHANNEL868DA */
-        if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ROAMINGBEACON)
+        /* Ignore area-local messages such as DA-ACKs and Roaming Beacons sent by other DAs on CHANNEL868DA */
+        if ((rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ROAMINGBEACON) || 
+            (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK))
         {
             if ((rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND) && (rdcp_msg_in.header.origin < RDCP_ADDRESS_MG_LOWERBOUND))
             {
