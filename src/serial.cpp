@@ -129,14 +129,15 @@ void serial_banner(void)
   snprintf(buf, INFOLEN, "%sINFO: Device LoRa syncword   : 0x%02X, 0x%02X, 0x%02X, 0x%02X\0",                     SERIAL_PREFIX, CFG.lora[CHANNEL433].sw, CFG.lora[CHANNEL868DA].sw, CFG.lora[CHANNEL868MG].sw, CFG.lora[CHANNEL868LW].sw); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
   snprintf(buf, INFOLEN, "%sINFO: Device LoRa TX power   : %d dBm, %d dBm, %d dBm, %d dBm\0",                     SERIAL_PREFIX, CFG.lora[CHANNEL433].pw, CFG.lora[CHANNEL868DA].pw, CFG.lora[CHANNEL868MG].pw, CFG.lora[CHANNEL868LW].pw); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
   snprintf(buf, INFOLEN, "%sINFO: Device LoRa preamble   : %2d symbols, %2d symbols, %2d symbols, %2d symbols\0", SERIAL_PREFIX, CFG.lora[CHANNEL433].pl, CFG.lora[CHANNEL868DA].pl, CFG.lora[CHANNEL868MG].pl, CFG.lora[CHANNEL868LW].pl); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
-  snprintf(buf, INFOLEN, "%sINFO: Device Options         : Relay %s, EP %s, Fwd %s, Fetch %s, Per868 %s, Send %s, BT %s", SERIAL_PREFIX,
+  snprintf(buf, INFOLEN, "%sINFO: Device Options         : Relay %s, EP %s, Fwd %s, Fetch %s, Per868 %s, Send %s, BT %s, RoamBeac %s", SERIAL_PREFIX,
     CFG.relay_enabled    ? "+" : "DISABLED",
     CFG.ep_enabled       ? "+" : "DISABLED", 
     CFG.forward_enabled  ? "+" : "DISABLED", 
     CFG.fetch_enabled    ? "+" : "DISABLED", 
     CFG.periodic_enabled ? "+" : "DISABLED", 
     CFG.send_enabled     ? "+" : "DISABLED",
-    CFG.bt_enabled       ? "+" : "DISABLED"
+    CFG.bt_enabled       ? "+" : "DISABLED",
+    CFG.roaming_beacon_enabled ? "+" : "DISABLED"
   ); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
   snprintf(buf, INFOLEN, "%SINFO: Device settings        : HI %" PRId32 "m, MPA %" PRId64 "h, PI %" PRId64 "m", SERIAL_PREFIX,
     CFG.heartbeat_interval / MINUTES_TO_MILLISECONDS, 
@@ -615,6 +616,10 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     else if (p1.equals(String("SEND")))
     {
       CFG.send_enabled = !CFG.send_enabled;
+    }
+    else if (p1.equals(String("ROAMINGBEACON")))
+    {
+      CFG.roaming_beacon_enabled = !CFG.roaming_beacon_enabled;
     }
     else 
     {

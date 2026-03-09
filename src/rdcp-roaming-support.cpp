@@ -29,6 +29,9 @@ void roaming_support_check_and_send_beacon(void)
   /* No roaming beacons in non-crisis mode */
   if (CFG.infrastructure_status == RDCP_INFRASTRUCTURE_MODE_NONCRISIS) return;
 
+  /* Roaming beacons disabled? */
+  if (CFG.roaming_beacon_enabled == false) return;
+
   int64_t now = my_millis();
 
   /* Do not send roaming beacon if we transmitted less than a minute ago ourselves */

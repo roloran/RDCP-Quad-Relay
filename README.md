@@ -48,7 +48,7 @@ Additional commands:
 
 - `SHOW NEIGHBORS` lists the currently registered neighbors.
 - `SHOW MEMORIES` lists the currently stored memories (old OAs and their Signatures).
-- `TOGGLE something` enables or disables specific functionality. `something` can be `RELAY`, `EP`, `FORWARD`, `STATUS`, `FETCH`, `PERIODIC`, or `SEND`. Used by RDCP Infrastructure maintenance personnel only.
+- `TOGGLE something` enables or disables specific functionality. `something` can be `RELAY`, `EP`, `FORWARD`, `STATUS`, `FETCH`, `PERIODIC`, `SEND`, or `ROAMINGBEACON`. Used by RDCP Infrastructure maintenance personnel only.
 - `HEARTBEAT 30` sets the DA Heartbeat interval in minutes.
 - `OMRETRANS 0` sets the initial value of the counter RDCP Header field when transmitting memories.
 - `MAXPERAGE 24` sets the maximum age of memories selected for the Periodic868 chain.

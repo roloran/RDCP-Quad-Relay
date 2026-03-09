@@ -102,6 +102,7 @@ struct da_config {
     bool     fetch_enabled                = true;                 /// Honor RDCP Fetch messages from others
     bool     periodic_enabled             = true;                 /// Send old memories periodically on 868 MHz
     bool     send_enabled                 = true;                 /// Enable or disable sending on both channels
+    bool     roaming_beacon_enabled       = true;                 /// Send roaming beacons in a crisis mode?
     uint8_t  memory_retransmissions       = 0;                    /// Retransmission counter for old memories on Fetch
     int32_t  heartbeat_interval           = 30 * MINUTES_TO_MILLISECONDS;    /// How often to send DA Heartbeats
     uint8_t  infrastructure_status        = RDCP_INFRASTRUCTURE_MODE_CRISIS; /// Current RDCP Infrastructure Status
