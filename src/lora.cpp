@@ -726,6 +726,7 @@ void loop_radio(void)
         { // receiving, not CAD
           byte byteArr[300];
           int numBytes = radio433.getPacketLength();
+          if (numBytes > 200) numBytes = 200;
           int state = radio433.readData(byteArr, numBytes);
 
           if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))
@@ -832,6 +833,7 @@ void loop_radio(void)
         {
           byte byteArr[300];
           int numBytes = radio868da.getPacketLength();
+          if (numBytes > 200) numBytes = 200;
           int state = radio868da.readData(byteArr, numBytes);
 
           if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))

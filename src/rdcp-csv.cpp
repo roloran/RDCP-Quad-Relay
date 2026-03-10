@@ -36,7 +36,12 @@ void rdcpcsv_logfile_append(String info)
   if (rdcpcsv_logfile_count > RDCPCSV_LOGFILE_MAX_ENTRIES)
   {
     serial_writeln("ERROR: RDCPCSV logfile maximum size exceeded");
+    rdcpcsv_logfile_enabled = false;
     return;
+  }
+  else 
+  {
+    serial_writeln("INFO: Writing line to logfile");
   }
   rdcpcsv_logfile_count++;
   File f = LittleFS.open(FILENAME_RDCPCSV_LOGFILE, FILE_APPEND);
@@ -160,7 +165,7 @@ void print_rdcp_csv_out(uint8_t channel, int txqidx)
     CFEst[channel] - now,
     rm.header.rdcp_payload_length + RDCP_HEADER_SIZE,
     refnr,
-    most_recent_future_timeslots, // ?
+    -1,
     rm.header.sender,
     rm.header.origin,
     rm.header.sequence_number,
@@ -171,7 +176,7 @@ void print_rdcp_csv_out(uint8_t channel, int txqidx)
     rm.header.relay2,
     rm.header.relay3,
     rm.header.checksum,
-    most_recent_airtime, // ?
+    -1,
     CFG.lora[channel].freq,
     0.0,
     0.0
