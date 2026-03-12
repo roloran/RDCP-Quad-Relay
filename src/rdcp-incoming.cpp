@@ -56,6 +56,17 @@ void rdcp_handle_incoming_lora_message(void)
         serial_writeln("INFO: RDCP checksum mismatch - not processing");
         // NB: Any RDCP Header or RDCP Payload field may have been corrupted,
         //     so we do not process anything further, including updates to CFEst.
+        bad_crc_counter++;
+        if (bad_crc_counter % 100 == 0)
+        {
+            /* 
+                Bad CRC usually is the result of poor reception or other devices sending 
+                non-RDCP LoRA packets on the same channel. However, we re-initialize our 
+                LoRa radios every now and then in case it might be hardware-related. 
+            */
+            serial_writeln("WARNING: Bad CRC counter exceeded threshold - consider additional countermeasures!");
+            reset_radio(current_lora_message.channel);
+        }        
         return;
     }
 

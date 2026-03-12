@@ -286,6 +286,32 @@ void setup_lora_hardware(void)
   return;
 }
 
+void reset_radio(int channel)
+{
+  if ((channel == CHANNEL433) || (channel == ALL_CHANNELS))
+  {
+    radio433.reset();
+    radio433.begin(); 
+  }
+  if ((channel == CHANNEL868DA) || (channel == ALL_CHANNELS))
+  {
+    radio868da.reset();
+    radio868da.begin(); 
+  }
+  if ((channel == CHANNEL868MG) || (channel == ALL_CHANNELS))
+  {
+    radio868mg.reset();
+    radio868mg.begin(); 
+  }
+  if ((channel == CHANNEL868LW) || (channel == ALL_CHANNELS))
+  {
+    radio868lw.reset();
+    radio868lw.begin(); 
+  }
+  setup_radio(channel);
+  return;
+}
+
 void serial_write_incoming_message(int channel)
 {
   char info[2*INFOLEN];
@@ -363,13 +389,13 @@ void setFlag868lw(void)
   return;
 }
 
-bool setup_radio(void)
+bool setup_radio(int channel)
 {
   highlander = xSemaphoreCreateBinary();
   assert(highlander);
   xSemaphoreGive(highlander);
 
-  if (hasRadio433)
+  if ((hasRadio433) && ((channel==CHANNEL433) || (channel==ALL_CHANNELS)))
   {
     if (radio433.setFrequency(CFG.lora[CHANNEL433].freq) == RADIOLIB_ERR_INVALID_FREQUENCY)
     {
@@ -437,7 +463,7 @@ bool setup_radio(void)
     }
   }
 
-  if (hasRadio868da)
+  if ((hasRadio868da) && ((channel==CHANNEL868DA) || (channel==ALL_CHANNELS)))
   {
     if (radio868da.setFrequency(CFG.lora[CHANNEL868DA].freq) == RADIOLIB_ERR_INVALID_FREQUENCY)
     {
@@ -505,7 +531,7 @@ bool setup_radio(void)
     }
   }
 
-  if (hasRadio868mg)
+  if ((hasRadio868mg) && ((channel==CHANNEL868MG) || (channel==ALL_CHANNELS)))
   {
     if (radio868mg.setFrequency(CFG.lora[CHANNEL868MG].freq) == RADIOLIB_ERR_INVALID_FREQUENCY)
     {
@@ -573,7 +599,7 @@ bool setup_radio(void)
     }
   }
 
-  if (hasRadio868lw)
+  if ((hasRadio868lw) && ((channel==CHANNEL868LW) || (channel==ALL_CHANNELS)))
   {
     if (radio868lw.setFrequency(CFG.lora[CHANNEL868LW].freq) == RADIOLIB_ERR_INVALID_FREQUENCY)
     {

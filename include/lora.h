@@ -62,6 +62,7 @@
 #define NUMCHANNELSTXQ  2
 
 #define NO_CHANNEL      99
+#define ALL_CHANNELS    100
 
 /**
  * Configuration settings for one LoRa channel
@@ -140,7 +141,7 @@ void setup_lora_hardware(void);
 /**
  * Configure the LoRa radios with channel-specific settings
  */
-bool setup_radio(void);
+bool setup_radio(int channel=ALL_CHANNELS);
 
 /**
  * Periodically handle reception, transmission, CAD, timeouts etc. 
@@ -191,6 +192,12 @@ int start_receive(uint8_t channel);
  * Get a random byte from the 868 MHz DA LoRa radio via RadioLib.
  */
 uint8_t radio868_random_byte(void);
+
+/**
+ * Reset a radio.
+ * @param channel Channel to reset, either CHANNEL433 or CHANNEL868[DA|MG|LW]. 
+ */
+void reset_radio(int channel=ALL_CHANNELS);
 
 #endif
 /* EOF */

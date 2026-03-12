@@ -328,7 +328,7 @@ bool rdcp_txqueue_loop(void)
             txq[channel].entries[tx_ongoing[channel]].in_process = false;
             txq[channel].entries[tx_ongoing[channel]].cad_retry = 0;
             tx_ongoing[channel] = -1;
-            setup_radio();
+            reset_radio(channel);
           }
           continue;
         }
