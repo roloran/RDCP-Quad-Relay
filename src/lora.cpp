@@ -124,7 +124,7 @@ bool start_send_868da(const uint8_t* data, size_t len)
   delay(1);
   digitalWrite(RADIO868DATXEN, HIGH);
   delay(1);
-  if (CFG.send_enabled)
+  if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
   {
     return radio868da.startTransmit(data, len);
   }
@@ -141,7 +141,7 @@ bool start_send_868mg(const uint8_t* data, size_t len)
   delay(1);
   digitalWrite(RADIO868MGTXEN, HIGH);
   delay(1);
-  if (CFG.send_enabled)
+  if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
   {
     return radio868mg.startTransmit(data, len);
   }
@@ -158,7 +158,7 @@ bool start_send_868lw(const uint8_t* data, size_t len)
   delay(1);
   digitalWrite(RADIO868LWTXEN, HIGH);
   delay(1);
-  if (CFG.send_enabled)
+  if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
   {
     return radio868lw.startTransmit(data, len);
   }
@@ -175,7 +175,7 @@ bool start_send_433(const uint8_t* data, size_t len)
   delay(1);
   digitalWrite(RADIO433TXEN, HIGH);
   delay(1);
-  if (CFG.send_enabled)
+  if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
   {
     return radio433.startTransmit(data, len);
   }
