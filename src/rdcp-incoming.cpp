@@ -57,7 +57,7 @@ void rdcp_handle_incoming_lora_message(void)
         // NB: Any RDCP Header or RDCP Payload field may have been corrupted,
         //     so we do not process anything further, including updates to CFEst.
         bad_crc_counter++;
-        if (bad_crc_counter % 100 == 0)
+        if (bad_crc_counter % BAD_CRC_COUNTER_THRESHOLD == 0)
         {
             /* 
                 Bad CRC usually is the result of poor reception or other devices sending 
@@ -65,6 +65,7 @@ void rdcp_handle_incoming_lora_message(void)
                 LoRa radios every now and then in case it might be hardware-related. 
             */
             serial_writeln("WARNING: Bad CRC counter exceeded threshold - consider additional countermeasures!");
+            bad_crc_counter = COUNT_ZERO;
             reset_radio(current_lora_message.channel);
         }        
         return;

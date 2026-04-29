@@ -8,5 +8,7 @@
  */
 void rdcp_handle_incoming_lora_message(void);
 
+#define BAD_CRC_COUNTER_THRESHOLD 20000
+
 #endif
 /* EOF */

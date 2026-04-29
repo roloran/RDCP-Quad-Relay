@@ -733,7 +733,7 @@ void rdcp_check_heartbeat(void)
             }
             else 
             {
-                num_heartbeats_skipped = 0;
+                num_heartbeats_skipped = COUNT_ZERO;
                 serial_writeln("WARNING: Forcing heartbeat sending despite busy channel due to number of previous skips");
             }
         }
