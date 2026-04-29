@@ -33,6 +33,7 @@ rdcp_message rdcp_response;
 int64_t last_heartbeat_sent = RDCP_TIMESTAMP_ZERO;
 int64_t fetch_timeout = RDCP_TIMESTAMP_ZERO;
 int64_t last_dasresp_sent = RDCP_TIMESTAMP_ZERO;
+uint8_t num_heartbeats_skipped = COUNT_ZERO;
 bool rtc_active = false;
 rtc_entry RTC[MAX_RTC];
 
@@ -723,9 +724,18 @@ void rdcp_check_heartbeat(void)
         /* Don't even schedule a heartbeat when 433 MHz is currently very busy. */
         if (get_num_txq_entries(CHANNEL433) > 1)
         {
-            serial_writeln("WARNING: Postponing heartbeat due to busy 433 MHz channel");
-            last_heartbeat_sent += 5 * MINUTES_TO_MILLISECONDS;
-            return;
+            if (num_heartbeats_skipped <= HEARTBEAT_SKIP_THRESHOLD)
+            {
+                serial_writeln("WARNING: Postponing heartbeat due to busy 433 MHz channel");
+                last_heartbeat_sent += 5 * MINUTES_TO_MILLISECONDS;
+                num_heartbeats_skipped += 1;
+                return;
+            }
+            else 
+            {
+                num_heartbeats_skipped = 0;
+                serial_writeln("WARNING: Forcing heartbeat sending despite busy channel due to number of previous skips");
+            }
         }
 
         last_heartbeat_sent = now;

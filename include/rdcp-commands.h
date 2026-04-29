@@ -49,6 +49,7 @@ struct rtc_entry {
 };
 
 #define MAX_RTC 16
+#define HEARTBEAT_SKIP_THRESHOLD 5
 
 /**
  * Check for RTCs.

@@ -396,6 +396,26 @@ bool rdcp_txqueue_loop(void)
 int get_num_txq_entries(uint8_t channel)
 {
     if (channel >= NUMCHANNELSTXQ) return 0;
+
+    uint8_t counter = 0;
+    for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
+    {
+      if (txq[channel].entries[i].waiting)
+      {
+        counter += 1;
+      }
+    }
+
+    if (counter != txq[channel].num_entries)
+    {
+      char info[INFOLEN];
+      snprintf(info, INFOLEN, "WARNING: TXQ for channel %d has inconsistent num_entries counter %d vs. actual count %d, correcting",
+        channel, txq[channel].num_entries, counter);
+      serial_writeln(info);
+
+      txq[channel].num_entries = counter; 
+    }
+
     return txq[channel].num_entries;
 }
 
