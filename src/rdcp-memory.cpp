@@ -11,11 +11,14 @@ rdcp_memory_table mem;
 extern lora_message current_lora_message;
 extern rdcp_message rdcp_msg_in;
 runtime_da_data DART;
+extern int64_t reboot_requested;
 
 #define FILENAME_MEMORIES "/memory.da"
 
 void rdcp_memory_remember(void)
 {
+    if (reboot_requested) return; /* Do not persist memories when a reboot is upcoming. */
+
     int index = RDCP_INDEX_NONE;
 
     /* Check for duplicates. Only store unique memories. */
@@ -106,6 +109,9 @@ void rdcp_memory_forget(void)
         mem.entries[i].used_in_periodic868 = false;
     }
     mem.idx_first = RDCP_INDEX_NONE;
+
+    rdcp_memory_persist(); /* Avoid reading old memories after rebooting. */
+
     return;
 }
 
