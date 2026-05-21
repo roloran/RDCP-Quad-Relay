@@ -56,6 +56,8 @@ void rdcp_prepare_response_header(bool reuse_seqnr)
     /* Update CRC header field */
     uint8_t data_for_crc[INFOLEN];
     memcpy(&data_for_crc, &rdcp_response.header, RDCP_HEADER_SIZE - RDCP_CRC_SIZE);
+    if (rdcp_response.header.rdcp_payload_length > RDCP_MAX_PAYLOAD_SIZE - RDCP_HEADER_SIZE) 
+        rdcp_response.header.rdcp_payload_length = RDCP_MAX_PAYLOAD_SIZE - RDCP_HEADER_SIZE;
     for (int i=0; i < rdcp_response.header.rdcp_payload_length; i++)
         data_for_crc[i + RDCP_HEADER_SIZE - RDCP_CRC_SIZE] = rdcp_response.payload.data[i];
     uint16_t actual_crc = crc16(data_for_crc, RDCP_HEADER_SIZE - RDCP_CRC_SIZE + rdcp_response.header.rdcp_payload_length);
@@ -72,6 +74,8 @@ void rdcp_pass_response_to_scheduler(uint8_t channel, bool no_larger_delay=false
 {
     uint8_t data_for_scheduler[INFOLEN];
     memcpy(&data_for_scheduler, &rdcp_response.header, RDCP_HEADER_SIZE);
+    if (rdcp_response.header.rdcp_payload_length > RDCP_MAX_PAYLOAD_SIZE - RDCP_HEADER_SIZE) 
+        rdcp_response.header.rdcp_payload_length = RDCP_MAX_PAYLOAD_SIZE - RDCP_HEADER_SIZE;
     for (int i=0; i < rdcp_response.header.rdcp_payload_length; i++)
         data_for_scheduler[i + RDCP_HEADER_SIZE] = rdcp_response.payload.data[i];
 
@@ -190,6 +194,8 @@ void rdcp_cmd_send_da_status_response(bool unsolicited = false)
     rdcp_response.payload.data[5] = DART.num_rdcp_tx % 256;
     rdcp_response.payload.data[6] = DART.num_rdcp_tx / 256;
 
+    int max_das = (RDCP_MAX_PAYLOAD_SIZE - 9) / 4;
+
     uint16_t num_mgs = 0;
     uint16_t num_das = 0;
     for (int i=0; i < MAX_NEIGHBORS; i++)
@@ -206,6 +212,7 @@ void rdcp_cmd_send_da_status_response(bool unsolicited = false)
         {
             if (!neighbors[i].counted)
             {
+                if (num_das >= max_das) continue;
                 rdcp_response.payload.data[9 + (4*num_das + 0)] = neighbors[i].sender % 256;
                 rdcp_response.payload.data[9 + (4*num_das + 1)] = neighbors[i].sender / 256;
                 rdcp_response.payload.data[9 + (4*num_das + 2)] = BIAS_RSSI + (int8_t) neighbors[i].rssi;
@@ -826,6 +833,11 @@ void rdcp_cmd_check_rtc(void)
 void rdcp_cmd_rtc(void)
 {
     uint8_t sha[SHABUFSIZE];
+    if (rdcp_msg_in.header.rdcp_payload_length <= RDCP_SIGNATURE_LENGTH) 
+    {
+        serial_writeln("WARNING: Invalid RTC message");
+        return;
+    }
     get_inline_hash(&rdcp_msg_in, rdcp_msg_in.header.rdcp_payload_length - RDCP_SIGNATURE_LENGTH, sha);
     uint8_t sig[SIGBUFSIZE];
     for (int i=0; i<RDCP_SIGNATURE_LENGTH; i++) sig[i] = rdcp_msg_in.payload.data[rdcp_msg_in.header.rdcp_payload_length - RDCP_SIGNATURE_LENGTH + i];
@@ -906,6 +918,12 @@ void rdcp_send_cire(uint8_t subtype, uint16_t refnr, char *content)
     unsigned int len = strlen(content);
     memset(buf, 0, sizeof(buf));
     int c_total = unishox2_compress_simple(content, len, buf);
+
+    if (c_total > RDCP_MAX_PAYLOAD_SIZE - RDCP_PAYLOAD_SIZE_SUBHEADER_CIRE - RDCP_AESTAG_SIZE - RDCP_HEADER_SIZE)
+    {
+        serial_writeln("WARNING: CIRE content too long after Unishox2 compression - truncating");
+        c_total = RDCP_MAX_PAYLOAD_SIZE - RDCP_PAYLOAD_SIZE_SUBHEADER_CIRE - RDCP_AESTAG_SIZE - RDCP_HEADER_SIZE;
+    }
 
     /* Fill the RDCP Payload with the Unishox2 content */
     for (int i=0; i < c_total; i++) rdcp_response.payload.data[i+RDCP_PAYLOAD_SIZE_SUBHEADER_CIRE] = buf[i];

@@ -72,6 +72,12 @@ void rdcp_handle_incoming_lora_message(void)
         return;
     }
 
+    if (rdcp_msg_in.header.rdcp_payload_length > (RDCP_MAX_PAYLOAD_SIZE - RDCP_HEADER_SIZE))
+    {
+        serial_writeln("WARNING: Stated RDCP payload length exceeds maximum allowed size, ignoring");
+        return;
+    }
+
     /* Completely ignore selected messages */
     if (current_lora_message.channel == CHANNEL868DA)
     {

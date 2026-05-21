@@ -26,17 +26,20 @@ bool do_not_persist_dupetable = false;
 
 int64_t rdcp_get_channel_free_estimation(uint8_t channel)
 {
+  if (channel >= NUMCHANNELS) return -1;
   return CFEst[channel];
 }
 
 bool rdcp_set_channel_free_estimation(uint8_t channel, int64_t new_value)
 {
+  if (channel >= NUMCHANNELS) return -1;
   CFEst[channel] = new_value;
   return true; 
 }
 
 bool rdcp_update_channel_free_estimation(uint8_t channel, int64_t new_value)
 {
+  if (channel >= NUMCHANNELS) return false;
   if (rdcp_get_channel_free_estimation(channel) < new_value)
   {
     rdcp_set_channel_free_estimation(channel, new_value);
@@ -271,6 +274,8 @@ bool rdcp_propagation_cycle_duplicate(void)
 
 uint16_t airtime_in_ms(uint8_t channel, uint8_t payload_size)
 {
+  if (channel >= NUMCHANNELS) return 0;
+  
   uint16_t time_for_packet = 0;
 
   uint32_t bandwidth_in_hz = (uint32_t) CFG.lora[channel].bw * 1000;

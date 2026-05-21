@@ -81,6 +81,8 @@ void rdcp_forward_schedule(int add_random_delay)
 
     /* Update CRC header field */
     uint8_t data_for_crc[INFOLEN];
+    if (r.header.rdcp_payload_length > RDCP_MAX_PAYLOAD_SIZE - RDCP_HEADER_SIZE) 
+        r.header.rdcp_payload_length = RDCP_MAX_PAYLOAD_SIZE - RDCP_HEADER_SIZE;
     memcpy(&data_for_crc, &r.header, RDCP_HEADER_SIZE - RDCP_CRC_SIZE);
     for (int i=0; i < r.header.rdcp_payload_length; i++) data_for_crc[i + RDCP_HEADER_SIZE - RDCP_CRC_SIZE] = r.payload.data[i];
     uint16_t actual_crc = crc16(data_for_crc, RDCP_HEADER_SIZE - RDCP_CRC_SIZE + r.header.rdcp_payload_length);
