@@ -832,6 +832,7 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
       lorapacket_in_sim.rssi = 100;
       lorapacket_in_sim.snr = 0;
       lorapacket_in_sim.timestamp = my_millis();
+      if (decoded_length > RDCP_MAX_PAYLOAD_SIZE) decoded_length = RDCP_MAX_PAYLOAD_SIZE;
       lorapacket_in_sim.payload_length = decoded_length;
       for (int i=0; i != decoded_length; i++) lorapacket_in_sim.payload[i] = decoded_string[i];
 

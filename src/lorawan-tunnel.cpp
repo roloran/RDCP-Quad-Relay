@@ -183,6 +183,12 @@ our HQ using a RDCP_MSGTYPE_TUNNEL RDCP Message.
 */
 void lorawan_tunnel_incoming(void)
 {
+  if (current_lora_message.payload_length < 5)
+  {
+    serial_writeln("INFO: CHANNEL868LW packet too small to be a valid LoRaWAN packet, skipping");
+    return;
+  }
+
   uint32_t devaddr = read_uint32_le(&current_lora_message.payload[1]);
 
   int64_t last_tunneled = -1;

@@ -185,7 +185,7 @@ void print_rdcp_csv_out(uint8_t channel, int txqidx)
   serial_writeln(info);
   rdcpcsv_logfile_append(info);
 
-  last_csv_timestamp[current_lora_message.channel] = now;
+  last_csv_timestamp[channel] = now;
   return;
 
 }

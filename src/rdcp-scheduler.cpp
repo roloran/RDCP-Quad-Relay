@@ -81,6 +81,12 @@ bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool importan
       return false;
     }
 
+    if (len > RDCP_MAX_PAYLOAD_SIZE)
+    {
+      serial_writeln("ERROR: Scheduled message exceeds allowed maximum size");
+      return false;
+    }
+
     int64_t now = my_millis();
 
     for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)

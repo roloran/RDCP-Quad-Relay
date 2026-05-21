@@ -48,6 +48,7 @@ void rdcp_handle_incoming_lora_message(void)
 
     /* Copy the message to process into the rdcp_msg_in data structure */
     memcpy(&rdcp_msg_in.header, &current_lora_message.payload, RDCP_HEADER_SIZE);
+    if (current_lora_message.payload_length > RDCP_MAX_PAYLOAD_SIZE) current_lora_message.payload_length = RDCP_MAX_PAYLOAD_SIZE;
     for (int i=RDCP_HEADER_SIZE; i<current_lora_message.payload_length; i++) rdcp_msg_in.payload.data[i-RDCP_HEADER_SIZE] = current_lora_message.payload[i];
     
     /* Verify the CRC-16 checksum */

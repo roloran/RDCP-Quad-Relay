@@ -966,6 +966,7 @@ void loop_radio(void)
         {
           byte byteArr[300];
           int numBytes = radio868mg.getPacketLength();
+          if (numBytes > RDCP_MAX_PAYLOAD_SIZE) numBytes = RDCP_MAX_PAYLOAD_SIZE;
           int state = radio868mg.readData(byteArr, numBytes);
 
           if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))
@@ -1072,6 +1073,7 @@ void loop_radio(void)
         {
           byte byteArr[300];
           int numBytes = radio868lw.getPacketLength();
+          if (numBytes > RDCP_MAX_PAYLOAD_SIZE) numBytes = RDCP_MAX_PAYLOAD_SIZE;
           int state = radio868lw.readData(byteArr, numBytes);
 
           if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))
@@ -1116,6 +1118,11 @@ void loop_radio(void)
 void send_lora_message_binary(int channel, uint8_t *payload, uint8_t length)
 {
   if (length == 0) return;
+  if (length > RDCP_MAX_PAYLOAD_SIZE)
+  {
+    serial_writeln("ERROR: Cannot send LoRa message, payload length exceeds maximum size");
+    return;
+  }
 
   for (int i=0; i != length; i++) { lora_queue_out[channel].payload[i] = payload[i]; }
   lora_queue_out[channel].payload_length = length;
