@@ -674,7 +674,8 @@ void rdcp_cmd_fetch_all(void)
         {
             if (mem.entries[(i + first) % MAX_STORED_MSGS].reference_number >= wanted_min_ref)
             {
-                starter = i;
+                if (!mem.entries[(i + first) % MAX_STORED_MSGS].slot_used) continue;
+                starter = (i + first) % MAX_STORED_MSGS;
                 break; // find first only
             }
         }
@@ -703,7 +704,8 @@ void rdcp_cmd_fetch_one(void)
         {
             if (mem.entries[(i + first) % MAX_STORED_MSGS].reference_number == wanted_ref)
             {
-                starter = i;
+                if (!mem.entries[(i + first) % MAX_STORED_MSGS].slot_used) continue;
+                starter = (i + first) % MAX_STORED_MSGS;
                 break; // find first only
             }
         }
@@ -770,6 +772,8 @@ void rdcp_check_heartbeat(void)
                 }
             }
         }
+
+        if (num_mgs > 91) num_mgs = 91;
 
         rdcp_response.payload.data[0] = num_mgs % 256;
         rdcp_response.payload.data[1] = num_mgs / 256;

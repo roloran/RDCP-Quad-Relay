@@ -152,8 +152,8 @@ void rdcp_schedule_relayed_message(int relay_delay)
     uint8_t my_relay1 = CFG.oarelays[0]; // Default direction is to spread in the mesh
     uint8_t my_relay2 = CFG.oarelays[1];
     /* Don't assign the sender we got the message from as next relay */
-    if (my_relay1 == rdcp_msg_in.header.sender & 0x000F) my_relay1 = CFG.oarelays[2];
-    if (my_relay2 == rdcp_msg_in.header.sender & 0x000F) my_relay2 = CFG.oarelays[2];
+    if (my_relay1 == (rdcp_msg_in.header.sender & 0x000F)) my_relay1 = CFG.oarelays[2];
+    if (my_relay2 == (rdcp_msg_in.header.sender & 0x000F)) my_relay2 = CFG.oarelays[2];
 
     if ((r.header.message_type == RDCP_MSGTYPE_DA_STATUS_RESPONSE) ||
         (r.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT) ||
@@ -161,8 +161,8 @@ void rdcp_schedule_relayed_message(int relay_delay)
         { // Direction for those messages is to bring them back to the HQ
             my_relay1 = CFG.cirerelays[0];
             my_relay2 = CFG.cirerelays[1];
-            if (my_relay1 == rdcp_msg_in.header.sender & 0x000F) my_relay1 = CFG.cirerelays[2];
-            if (my_relay2 == rdcp_msg_in.header.sender & 0x000F) my_relay2 = CFG.cirerelays[2];
+            if (my_relay1 == (rdcp_msg_in.header.sender & 0x000F)) my_relay1 = CFG.cirerelays[2];
+            if (my_relay2 == (rdcp_msg_in.header.sender & 0x000F)) my_relay2 = CFG.cirerelays[2];
         }
 
     if (myts == 1) // cannot be < 1 or > 8

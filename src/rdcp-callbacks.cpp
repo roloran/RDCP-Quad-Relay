@@ -385,7 +385,8 @@ void rdcp_periodic_kickstart(void)
                 if ((mem.entries[(i + first) % MAX_STORED_MSGS].timestamp_added >= now - CFG.max_periodic868_age) && 
                     (mem.entries[(i + first) % MAX_STORED_MSGS].reference_number >= min_refnr))
                 {
-                    starter = i;
+                    if (!mem.entries[(i + first) % MAX_STORED_MSGS].slot_used) continue;
+                    starter = (i + first) % MAX_STORED_MSGS;
                     break; // find first only
                 }
             }

@@ -356,7 +356,8 @@ bool rdcp_txqueue_loop(void)
                     { // already had found a suitable message, but maybe chose another one
                         if (txq[channel].entries[i].currently_scheduled_time < txq[channel].entries[tx_ongoing[channel]].currently_scheduled_time)
                             tx_ongoing[channel] = i; // try to keep the order
-                        if (txq[channel].entries[i].force_tx) tx_ongoing[channel] = i; // but prioritize hard-scheduled messages even more
+                        if ((txq[channel].entries[i].force_tx) && (!txq[channel].entries[tx_ongoing[channel]].force_tx)) 
+                          tx_ongoing[channel] = i; // but prioritize hard-scheduled messages even more unless we previously found a hard-scheduled message
                     }
                 }
             }
