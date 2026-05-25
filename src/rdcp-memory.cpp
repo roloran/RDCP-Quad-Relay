@@ -26,10 +26,12 @@ void rdcp_memory_remember(void)
     uint16_t this_refnr = RDCP_OA_REFNR_SPECIAL_ZERO;
     if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT)
     {
+        if (rdcp_msg_in.header.rdcp_payload_length < 3) return; 
         this_refnr = rdcp_msg_in.payload.data[1] + 256 * rdcp_msg_in.payload.data[2];
     }
     else if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_SIGNATURE)
     {
+        if (rdcp_msg_in.header.rdcp_payload_length < 2) return; 
         this_refnr = rdcp_msg_in.payload.data[0] + 256 * rdcp_msg_in.payload.data[1];
     }
     uint16_t this_size = RDCP_HEADER_SIZE + rdcp_msg_in.header.rdcp_payload_length;

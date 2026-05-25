@@ -174,6 +174,11 @@ void rdcp_cmd_send_da_status_response(bool unsolicited = false)
     if (!unsolicited)
     {
         if (rdcp_msg_in.header.destination != CFG.rdcp_address) return; // respond to personal status request only
+        if (rdcp_msg_in.header.rdcp_payload_length < 1) 
+        {
+            serial_writeln("WARNING: Malformed DA Status Request received");
+            return;
+        } 
         want_reset = rdcp_msg_in.payload.data[0];
     }
 
@@ -416,6 +421,11 @@ void rdcp_derive_infrastructure_status_from_oa(void)
        ((rdcp_msg_in.header.destination >= RDCP_ADDRESS_MULTICAST_LOWERBOUND) && (rdcp_msg_in.header.destination <= RDCP_ADDRESS_MULTICAST_UPPERBOUND)))
     {
         /* RDCP v0.4 OAs have a subheader, and thus the OA subtype is the first byte of the RDCP Payload */
+        if (rdcp_msg_in.header.rdcp_payload_length < 1)
+        {
+            serial_writeln("WARNING: Invalid OA received, subheader missing");
+            return;
+        }
         uint8_t oatype = rdcp_msg_in.payload.data[0];
         uint8_t old_infrastructure_mode = CFG.infrastructure_status;
         if (oatype == RDCP_MSGTYPE_OA_SUBTYPE_NONCRISIS)  CFG.infrastructure_status = RDCP_INFRASTRUCTURE_MODE_NONCRISIS;
@@ -663,6 +673,12 @@ void rdcp_cmd_fetch_all(void)
 
     serial_writeln("INFO: Responding to Fetch All New Messages from neighbor");
 
+    if (rdcp_msg_in.header.rdcp_payload_length < 2)
+    {
+        serial_writeln("WARNING: Invalid Fetch All request received, requested RefNr missing");
+        return;
+    }
+
     /* Other side sends 0x0000 or latest refnr stored there, so increase by 1. */
     uint16_t wanted_min_ref = rdcp_msg_in.payload.data[0] + 256 * rdcp_msg_in.payload.data[1] + 1;
 
@@ -693,6 +709,12 @@ void rdcp_cmd_fetch_all(void)
 void rdcp_cmd_fetch_one(void)
 {
     if (rdcp_msg_in.header.destination != CFG.rdcp_address) return;
+
+    if (rdcp_msg_in.header.rdcp_payload_length < 2)
+    {
+        serial_writeln("WARNING: Invalid Fetch request received, requested RefNr missing");
+        return;
+    }
 
     uint16_t wanted_ref = rdcp_msg_in.payload.data[0] + 256 * rdcp_msg_in.payload.data[1];
 
