@@ -81,9 +81,15 @@ bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool importan
       return false;
     }
 
-    if (len > RDCP_MAX_PAYLOAD_SIZE)
+    if (len > RDCP_MAX_LORA_PAYLOAD_SIZE)
     {
       serial_writeln("ERROR: Scheduled message exceeds allowed maximum size");
+      return false;
+    }
+
+    if (!CFG.send_enabled || (CFG.rdcp_address == RDCP_UNCONFIGURED_DA_ADDRESS))
+    {
+      serial_writeln("ERROR: Refusing to schedule (send disabled or device not configured)");
       return false;
     }
 
@@ -480,7 +486,7 @@ void rdcp_reschedule_on_busy_channel(uint8_t channel)
   if (timediff > 0)
   {
     char info[INFOLEN];
-    snprintf(info, INFOLEN, "INFO: Rescheduling CHANNEL%d by %d ms due to timediff CFEst-now", channel, timediff);
+    snprintf(info, INFOLEN, "INFO: Rescheduling CHANNEL" PRIu8 " by %" PRId64 " ms due to timediff CFEst-now", channel, timediff);
     serial_writeln(info);
 
     rdcp_txqueue_reschedule(channel, timediff);

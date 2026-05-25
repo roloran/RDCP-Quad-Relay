@@ -8,7 +8,7 @@
   * Data structure for a TX Queue entry.
   */
 struct txqueue_entry {
-  uint8_t payload[RDCP_HEADER_SIZE + RDCP_MAX_PAYLOAD_SIZE] = {0};                 //< data of the outgoing message
+  uint8_t payload[RDCP_MAX_LORA_PAYLOAD_SIZE]               = {0};                 //< data of the outgoing message
   uint8_t payload_length                                    = 0;                   //< length of the outgoing message
   int64_t currently_scheduled_time                          = RDCP_TIMESTAMP_ZERO; //< timestamp when to transmit
   int64_t originally_scheduled_time                         = RDCP_TIMESTAMP_ZERO; //< timestamp when originally planned to transmit

@@ -41,22 +41,22 @@ da_config CFG;
 lora_message lorapacket_in_433, lorapacket_in_868da, lorapacket_in_868mg, lorapacket_in_868lw;
 lora_message lora_queue_out [NUMCHANNELS];
 
-bool enableInterrupt433    = true;
-bool enableInterrupt868da  = true;
-bool enableInterrupt868mg  = true;
-bool enableInterrupt868lw  = true;
-bool hasMsgToSend433       = false;
-bool hasMsgToSend868da     = false;
-bool hasMsgToSend868mg     = false;
-bool hasMsgToSend868lw     = false;
-bool msgOnTheWay433        = false;
-bool msgOnTheWay868da      = false;
-bool msgOnTheWay868mg      = false;
-bool msgOnTheWay868lw      = false;
-bool transmissionFlag433   = false;
-bool transmissionFlag868da = false;
-bool transmissionFlag868mg = false;
-bool transmissionFlag868lw = false;
+volatile bool enableInterrupt433    = true;
+volatile bool enableInterrupt868da  = true;
+volatile bool enableInterrupt868mg  = true;
+volatile bool enableInterrupt868lw  = true;
+volatile bool hasMsgToSend433       = false;
+volatile bool hasMsgToSend868da     = false;
+volatile bool hasMsgToSend868mg     = false;
+volatile bool hasMsgToSend868lw     = false;
+volatile bool msgOnTheWay433        = false;
+volatile bool msgOnTheWay868da      = false;
+volatile bool msgOnTheWay868mg      = false;
+volatile bool msgOnTheWay868lw      = false;
+volatile bool transmissionFlag433   = false;
+volatile bool transmissionFlag868da = false;
+volatile bool transmissionFlag868mg = false;
+volatile bool transmissionFlag868lw = false;
 int transmissionState433   = 0;
 int transmissionState868da = 0;
 int transmissionState868mg = 0;
@@ -118,7 +118,7 @@ int start_receive(uint8_t channel)
   else return -1;
 }
 
-bool start_send_868da(const uint8_t* data, size_t len)
+int start_send_868da(const uint8_t* data, size_t len)
 {
   digitalWrite(RADIO868DARXEN, LOW);
   delay(1);
@@ -131,11 +131,11 @@ bool start_send_868da(const uint8_t* data, size_t len)
   else 
   {
     serial_writeln("INFO: Send 868DA disabled");
-    return false;
+    return RADIOLIB_ERR_UNSUPPORTED;
   }
 }
 
-bool start_send_868mg(const uint8_t* data, size_t len)
+int start_send_868mg(const uint8_t* data, size_t len)
 {
   digitalWrite(RADIO868MGRXEN, LOW);
   delay(1);
@@ -148,11 +148,11 @@ bool start_send_868mg(const uint8_t* data, size_t len)
   else 
   {
     serial_writeln("INFO: Send 868MG disabled");
-    return false;
+    return RADIOLIB_ERR_UNSUPPORTED;
   }
 }
 
-bool start_send_868lw(const uint8_t* data, size_t len)
+int start_send_868lw(const uint8_t* data, size_t len)
 {
   digitalWrite(RADIO868LWRXEN, LOW);
   delay(1);
@@ -165,11 +165,11 @@ bool start_send_868lw(const uint8_t* data, size_t len)
   else 
   {
     serial_writeln("INFO: Send 868LW disabled");
-    return false;
+    return RADIOLIB_ERR_UNSUPPORTED;
   }
 }
 
-bool start_send_433(const uint8_t* data, size_t len)
+int start_send_433(const uint8_t* data, size_t len)
 {
   digitalWrite(RADIO433RXEN, LOW);
   delay(1);
@@ -182,7 +182,7 @@ bool start_send_433(const uint8_t* data, size_t len)
   else 
   {
     serial_writeln("INFO: Send 433 disabled");
-    return false;
+    return RADIOLIB_ERR_UNSUPPORTED;
   }
 }
 
@@ -391,7 +391,7 @@ void setFlag868lw(void)
 
 bool setup_radio(int channel)
 {
-  highlander = xSemaphoreCreateBinary();
+  if (highlander == NULL) highlander = xSemaphoreCreateBinary();
   assert(highlander);
   xSemaphoreGive(highlander);
 
@@ -966,7 +966,7 @@ void loop_radio(void)
         {
           byte byteArr[300];
           int numBytes = radio868mg.getPacketLength();
-          if (numBytes > RDCP_MAX_PAYLOAD_SIZE) numBytes = RDCP_MAX_PAYLOAD_SIZE;
+          if (numBytes > RDCP_MAX_LORA_PAYLOAD_SIZE) numBytes = RDCP_MAX_LORA_PAYLOAD_SIZE;
           int state = radio868mg.readData(byteArr, numBytes);
 
           if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))
@@ -1073,7 +1073,7 @@ void loop_radio(void)
         {
           byte byteArr[300];
           int numBytes = radio868lw.getPacketLength();
-          if (numBytes > RDCP_MAX_PAYLOAD_SIZE) numBytes = RDCP_MAX_PAYLOAD_SIZE;
+          if (numBytes > RDCP_MAX_LORA_PAYLOAD_SIZE) numBytes = RDCP_MAX_LORA_PAYLOAD_SIZE;
           int state = radio868lw.readData(byteArr, numBytes);
 
           if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))
@@ -1118,7 +1118,7 @@ void loop_radio(void)
 void send_lora_message_binary(int channel, uint8_t *payload, uint8_t length)
 {
   if (length == 0) return;
-  if (length > RDCP_MAX_PAYLOAD_SIZE)
+  if (length > RDCP_MAX_LORA_PAYLOAD_SIZE)
   {
     serial_writeln("ERROR: Cannot send LoRa message, payload length exceeds maximum size");
     return;

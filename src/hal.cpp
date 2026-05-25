@@ -28,10 +28,10 @@ int64_t my_random_in_range(uint32_t r_min, uint32_t r_max)
     if (!srand_called)
     {
         srand_called = true;
-        uint32_t my_seed = radio868_random_byte() + 
-                           (radio868_random_byte() << 8) +   
-                           (radio868_random_byte() << 16) +   
-                           (radio868_random_byte() << 24);
+        uint32_t my_seed = ((uint32_t) radio868_random_byte()) |
+                           ((uint32_t) radio868_random_byte() << 8) |
+                           ((uint32_t) radio868_random_byte() << 16) |
+                           ((uint32_t) radio868_random_byte() << 24);                           
         srand(my_seed);
     }
 

@@ -119,8 +119,8 @@ void serial_banner(void)
   snprintf(buf, INFOLEN, "%sINFO: Device RDCP multicast  : %04X %04X %04X %04X %04X\0", SERIAL_PREFIX, CFG.multicast[0], CFG.multicast[1], CFG.multicast[2], CFG.multicast[3], CFG.multicast[4]); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
   snprintf(buf, INFOLEN, "%sINFO: Device RDCP OA relays  : %01X %01X %01X\0",           SERIAL_PREFIX, CFG.oarelays[0], CFG.oarelays[1], CFG.oarelays[2]); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
   snprintf(buf, INFOLEN, "%sINFO: Device RDCP CIRE relays: %01X %01X %01X\0",           SERIAL_PREFIX, CFG.cirerelays[0], CFG.cirerelays[1], CFG.cirerelays[2]); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
-  snprintf(buf, INFOLEN, "%SINFO: Device TS4 all ones    : %s",                         SERIAL_PREFIX, CFG.ts4allones ? "enabled" : "disabled"); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
-  snprintf(buf, INFOLEN, "%SINFO: Device TS7Relay1 value : %02X",                       SERIAL_PREFIX, CFG.ts7relay1); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
+  snprintf(buf, INFOLEN, "%sINFO: Device TS4 all ones    : %s",                         SERIAL_PREFIX, CFG.ts4allones ? "enabled" : "disabled"); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
+  snprintf(buf, INFOLEN, "%sINFO: Device TS7Relay1 value : %02X",                       SERIAL_PREFIX, CFG.ts7relay1); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
   snprintf(buf, INFOLEN, "%sINFO: Device RDCP Fetch from : %04X\0",                     SERIAL_PREFIX, CFG.neighbor_for_fetch); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
   snprintf(buf, INFOLEN, "%sINFO: Device LoRa frequency  : %.3f MHz, %.3f MHz, %.3f MHz, %.3f MHz\0",             SERIAL_PREFIX, CFG.lora[CHANNEL433].freq, CFG.lora[CHANNEL868DA].freq, CFG.lora[CHANNEL868MG].freq, CFG.lora[CHANNEL868LW].freq); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
   snprintf(buf, INFOLEN, "%sINFO: Device LoRa bandwidth  : %3.0f kHz, %3.0f kHz, %3.0f kHz, %3.0f kHz\0",         SERIAL_PREFIX, CFG.lora[CHANNEL433].bw, CFG.lora[CHANNEL868DA].bw, CFG.lora[CHANNEL868MG].bw, CFG.lora[CHANNEL868LW].bw); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
@@ -139,7 +139,7 @@ void serial_banner(void)
     CFG.bt_enabled       ? "+" : "DISABLED",
     CFG.roaming_beacon_enabled ? "+" : "DISABLED"
   ); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf); 
-  snprintf(buf, INFOLEN, "%SINFO: Device settings        : HI %" PRId32 "m, MPA %" PRId64 "h, PI %" PRId64 "m", SERIAL_PREFIX,
+  snprintf(buf, INFOLEN, "%sINFO: Device settings        : HI %" PRId32 "m, MPA %" PRId64 "h, PI %" PRId64 "m", SERIAL_PREFIX,
     CFG.heartbeat_interval / MINUTES_TO_MILLISECONDS, 
     CFG.max_periodic868_age / HOURS_TO_MILLISECONDS, 
     CFG.periodic_interval / MINUTES_TO_MILLISECONDS); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf);
@@ -499,6 +499,7 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     char buffer[32];
     p1.toCharArray(buffer, 32);
     uint8_t new_relay_num = strtol(buffer, NULL, 10);
+    if (new_relay_num == 0) new_relay_num = 1; // Minimum for valid scenarios
     CFG.scenario_num_relays = new_relay_num;
     snprintf(info, INFOLEN, "INFO: Changed number of relays in RDCP scenario to %d", CFG.scenario_num_relays);
     serial_writeln(info);
@@ -832,7 +833,7 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
       lorapacket_in_sim.rssi = 100;
       lorapacket_in_sim.snr = 0;
       lorapacket_in_sim.timestamp = my_millis();
-      if (decoded_length > RDCP_MAX_PAYLOAD_SIZE) decoded_length = RDCP_MAX_PAYLOAD_SIZE;
+      if (decoded_length > RDCP_MAX_LORA_PAYLOAD_SIZE) decoded_length = RDCP_MAX_LORA_PAYLOAD_SIZE;
       lorapacket_in_sim.payload_length = decoded_length;
       for (int i=0; i != decoded_length; i++) lorapacket_in_sim.payload[i] = decoded_string[i];
 
@@ -907,7 +908,14 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     for (int i=0; i<32; i++) secret[i] = 0;
 
     char input[128];
+    for (int i=0; i<128; i++) input[i] = 0;
+
     p1.toCharArray(input, 128);
+    if (strlen(input) != 64)
+    {
+      serial_writeln("ERROR: Processing SHAREDSECRET command failed due to input length");
+      return;
+    }
 
     char hexbyte[3];
     hexbyte[2] = 0;

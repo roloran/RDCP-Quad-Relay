@@ -66,7 +66,8 @@
 #define RDCP_INDEX_FIRST    0
 
 /// RDCP v0.4 fixed maximum LoRa Payload size
-#define RDCP_MAX_PAYLOAD_SIZE 200
+#define RDCP_MAX_LORA_PAYLOAD_SIZE 200
+#define RDCP_MAX_INNER_PAYLOAD_SIZE (RDCP_MAX_LORA_PAYLOAD_SIZE - RDCP_HEADER_SIZE)
 
 /// Magic values for TX scheduling; > 0 means delay in milliseconds
 #define TX_IMMEDIATELY -1
@@ -104,7 +105,7 @@ struct rdcp_header {
   * Data structure for storing the RDCP v0.4 Payload of an RDCP Message
   */
 struct rdcp_payload {
-  uint8_t data[RDCP_MAX_PAYLOAD_SIZE]; // RDCP payload must not exceed 200 bytes
+  uint8_t data[RDCP_MAX_INNER_PAYLOAD_SIZE]; // RDCP payload must not exceed the maximum inner payload size
 };
   
 /**

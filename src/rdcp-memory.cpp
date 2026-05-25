@@ -75,7 +75,7 @@ void rdcp_memory_remember(void)
         }
     }
 
-    if (current_lora_message.payload_length > RDCP_MAX_PAYLOAD_SIZE) current_lora_message.payload_length = RDCP_MAX_PAYLOAD_SIZE;
+    if (current_lora_message.payload_length > RDCP_MAX_LORA_PAYLOAD_SIZE) current_lora_message.payload_length = RDCP_MAX_LORA_PAYLOAD_SIZE;
 
     mem.entries[index].slot_used = true;
     mem.entries[index].payload_length = current_lora_message.payload_length;

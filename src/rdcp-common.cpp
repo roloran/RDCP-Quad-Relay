@@ -102,7 +102,7 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
   if (current_lora_message.channel == CHANNEL433) rdcp_track_propagation_cycles(channel_free_at, origin, seqnr, PC_STATUS_KNOWN);
 
   char buf[INFOLEN];
-  snprintf(buf, INFOLEN, "INFO: Channel %d CFEst4current (in): +%zu ms, @%llu ms (airtime %u ms, retrans %zu ms, timeslot %zu ms, %d fut ts)", 
+  snprintf(buf, INFOLEN, "INFO: Channel " PRIu8 " CFEst4current (in): +" PRIu32 "ms, @" PRId64 " ms (airtime " PRIu16 " ms, retrans " PRIu32 " ms, timeslot " PRIu32 " ms, " PRIu8 " fut ts)", 
     current_lora_message.channel,
     channel_free_after, channel_free_at, airtime, remaining_current_sender_time, timeslot_duration, future_timeslots);
   serial_writeln(buf);
@@ -238,7 +238,7 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
   if (channel == CHANNEL433) rdcp_track_propagation_cycles(channel_free_at, origin, seqnr, PC_STATUS_CONTRIBUTOR);
 
   char buf[INFOLEN];
-  snprintf(buf, INFOLEN, "INFO: Channel %d CFEst4current (out): +%zu ms, @%llu ms (airtime %u ms, retrans %zu ms, timeslot %zu ms, %d fut ts)", 
+  snprintf(buf, INFOLEN, "INFO: Channel " PRIu8 " CFEst4current (out): +" PRIu32 "ms, @" PRId64 " ms (airtime " PRIu16 " ms, retrans " PRIu32 " ms, timeslot " PRIu32 " ms, " PRIu8 " fut ts)", 
     channel, 
     channel_free_after, channel_free_at, airtime, remaining_current_sender_time, timeslot_duration, future_timeslots);
   serial_writeln(buf);

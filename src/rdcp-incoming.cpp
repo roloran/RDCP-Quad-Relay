@@ -48,7 +48,7 @@ void rdcp_handle_incoming_lora_message(void)
 
     /* Copy the message to process into the rdcp_msg_in data structure */
     memcpy(&rdcp_msg_in.header, &current_lora_message.payload, RDCP_HEADER_SIZE);
-    if (current_lora_message.payload_length > RDCP_MAX_PAYLOAD_SIZE) current_lora_message.payload_length = RDCP_MAX_PAYLOAD_SIZE;
+    if (current_lora_message.payload_length > RDCP_MAX_INNER_PAYLOAD_SIZE) current_lora_message.payload_length = RDCP_MAX_INNER_PAYLOAD_SIZE;
     for (int i=RDCP_HEADER_SIZE; i<current_lora_message.payload_length; i++) rdcp_msg_in.payload.data[i-RDCP_HEADER_SIZE] = current_lora_message.payload[i];
     
     /* Verify the CRC-16 checksum */
@@ -72,9 +72,15 @@ void rdcp_handle_incoming_lora_message(void)
         return;
     }
 
-    if (rdcp_msg_in.header.rdcp_payload_length > (RDCP_MAX_PAYLOAD_SIZE - RDCP_HEADER_SIZE))
+    if (rdcp_msg_in.header.rdcp_payload_length > RDCP_MAX_INNER_PAYLOAD_SIZE)
     {
         serial_writeln("WARNING: Stated RDCP payload length exceeds maximum allowed size, ignoring");
+        return;
+    }
+
+    if ((rdcp_msg_in.header.rdcp_payload_length + RDCP_HEADER_SIZE) != current_lora_message.payload_length)
+    {
+        serial_writeln("WARNING: Mismatch between LoRa packet length and RDCP header information, ignoring");
         return;
     }
 
