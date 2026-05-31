@@ -50,11 +50,11 @@ bool rdcp_update_channel_free_estimation(uint8_t channel, int64_t new_value)
 
 uint8_t rdcp_get_default_retransmission_counter_for_messagetype(uint8_t mt)
 {
-  uint8_t nrt = NRT_LEVEL_LOW;
+  uint8_t nrt = CFG.nrt_level_low;
   if ( (mt == RDCP_MSGTYPE_INFRASTRUCTURE_RESET) || (mt == RDCP_MSGTYPE_ACK) ||
-       (mt == RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS) ) nrt = NRT_LEVEL_MIDDLE;
+       (mt == RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS) ) nrt = CFG.nrt_level_middle;
   if ( (mt == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT) || (mt == RDCP_MSGTYPE_CITIZEN_REPORT) ||
-       (mt == RDCP_MSGTYPE_SIGNATURE) ) nrt = NRT_LEVEL_HIGH;
+       (mt == RDCP_MSGTYPE_SIGNATURE) ) nrt = CFG.nrt_level_high;
   return nrt;
 }
 
@@ -65,12 +65,12 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
 
   uint32_t remaining_current_sender_time = airtime_with_buffer * rdcp_msg_in.header.counter;
 
-  uint8_t nrt = NRT_LEVEL_LOW;
+  uint8_t nrt = CFG.nrt_level_low;
   uint8_t mt = rdcp_msg_in.header.message_type;
   if ( (mt == RDCP_MSGTYPE_INFRASTRUCTURE_RESET) || (mt == RDCP_MSGTYPE_ACK) ||
-       (mt == RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS) ) nrt = NRT_LEVEL_MIDDLE;
+       (mt == RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS) ) nrt = CFG.nrt_level_middle;
   if ( (mt == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT) || (mt == RDCP_MSGTYPE_CITIZEN_REPORT) ||
-       (mt == RDCP_MSGTYPE_SIGNATURE) ) nrt = NRT_LEVEL_HIGH;
+       (mt == RDCP_MSGTYPE_SIGNATURE) ) nrt = CFG.nrt_level_high;
 
   uint32_t timeslot_duration = (nrt+1) * airtime_with_buffer;
 
@@ -202,11 +202,11 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
 
   uint32_t remaining_current_sender_time = airtime_with_buffer * (rcnt+1);
 
-  uint8_t nrt = NRT_LEVEL_LOW;
+  uint8_t nrt = CFG.nrt_level_low;
   if ( (mt == RDCP_MSGTYPE_INFRASTRUCTURE_RESET) || (mt == RDCP_MSGTYPE_ACK) ||
-       (mt == RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS) ) nrt = NRT_LEVEL_MIDDLE;
+       (mt == RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS) ) nrt = CFG.nrt_level_middle;
   if ( (mt == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT) || (mt == RDCP_MSGTYPE_CITIZEN_REPORT) ||
-       (mt == RDCP_MSGTYPE_SIGNATURE) ) nrt = NRT_LEVEL_HIGH;
+       (mt == RDCP_MSGTYPE_SIGNATURE) ) nrt = CFG.nrt_level_high;
 
   uint32_t timeslot_duration = (nrt+1) * airtime_with_buffer;
 
@@ -315,12 +315,12 @@ int64_t rdcp_get_timeslot_duration(uint8_t channel, uint8_t *data)
   uint16_t airtime = airtime_in_ms(channel, RDCP_HEADER_SIZE + h.rdcp_payload_length);
   uint16_t airtime_with_buffer = airtime + RDCP_TIMESLOT_BUFFERTIME;
 
-  uint8_t nrt = NRT_LEVEL_LOW;
+  uint8_t nrt = CFG.nrt_level_low;
   uint8_t mt = h.message_type;
   if ( (mt == RDCP_MSGTYPE_INFRASTRUCTURE_RESET) || (mt == RDCP_MSGTYPE_ACK) ||
-       (mt == RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS) ) nrt = NRT_LEVEL_MIDDLE;
+       (mt == RDCP_MSGTYPE_RESET_ALL_ANNOUNCEMENTS) ) nrt = CFG.nrt_level_middle;
   if ( (mt == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT) || (mt == RDCP_MSGTYPE_CITIZEN_REPORT) ||
-       (mt == RDCP_MSGTYPE_SIGNATURE) ) nrt = NRT_LEVEL_HIGH;
+       (mt == RDCP_MSGTYPE_SIGNATURE) ) nrt = CFG.nrt_level_high;
 
   duration = (nrt+1) * airtime_with_buffer;
 

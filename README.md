@@ -38,6 +38,7 @@ The commands `SHOW CONFIG` and `RESET CONFIG` can be used similar to other ROLOR
 - `RDCPRLCR 34E` sets the three other relays to use in the CIRE direction. See note about `RDCPRLOA`.
 - `RDCPTS7R DE` optionally sets the Relay1 RDCP Header field value for Timeslot-7 transmission. Avoid the use of this command unless you're fully aware of the impact.
 - `RDCPNEFF 0204` sets the neighbor to fetch messages from at start-up.
+- `RDCPNRT 024` sets the number of retransmissions per message category to 0, 2, and 4.
 - `MULTICAST B000 B001 B002 0000 0000` set the five multicast RDCP addresses for this device.
 - `NAME` gives the relay a name. This may be helpful for human operators.
 - `HQPUBKEY` and `SHAREDSECRET` must be used as for ROLODECK devices.

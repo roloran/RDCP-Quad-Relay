@@ -519,6 +519,20 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     serial_writeln(info);
     if (persist_selected_commands) persist_serial_command_for_replay(s);
   }
+  else if (s_uppercase.startsWith("RDCPNRT "))
+  { // RDCPNRT 024
+    // Sets the number of retransmissions per message category
+    String p1 = s.substring(8);
+    char buffer[32];
+    p1.toCharArray(buffer, 32);
+    uint32_t new_nrt = strtol(buffer, NULL, 16);
+    CFG.nrt_level_low    = (new_nrt & 0x00000F00) >> 8;
+    CFG.nrt_level_middle = (new_nrt & 0x000000F0) >> 4;
+    CFG.nrt_level_high   = (new_nrt & 0x0000000F);
+    snprintf(info, INFOLEN, "INFO: Changed this device's NRTs to %d, %d, %d", CFG.nrt_level_low, CFG.nrt_level_middle, CFG.nrt_level_high);
+    serial_writeln(info);
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
+  }
   else if (s_uppercase.startsWith("RDCPRLCR "))
   { // RDCPRLCR 34E
     // Sets the other relays to use for CIREs; 3-hex-digit (other relay's identifiers)

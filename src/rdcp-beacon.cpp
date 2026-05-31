@@ -23,7 +23,7 @@ void rdcp_beacon_send(uint8_t channel, int32_t beacon_number)
     rm.header.origin = CFG.rdcp_address;
     rm.header.sender = CFG.rdcp_address;
     rm.header.destination = RDCP_BROADCAST_ADDRESS;
-    rm.header.counter = NRT_LEVEL_LOW;
+    rm.header.counter = CFG.nrt_level_low;
     rm.header.sequence_number = get_next_rdcp_sequence_number(CFG.rdcp_address);
     rm.header.message_type = RDCP_MSGTYPE_TEST;
     rm.header.rdcp_payload_length = strlen(message);
