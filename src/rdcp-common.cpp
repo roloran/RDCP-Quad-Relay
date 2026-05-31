@@ -291,11 +291,15 @@ uint16_t airtime_in_ms(uint8_t channel, uint8_t payload_size)
   double time_for_preamble = (number_of_preamble_symbols + 4.25) * time_per_symbol;
 
   /* Calculate the airtime for the payload */
-  double number_of_payload_symbols = 8 + max((coding_rate + 4)*ceil((8 * payload_size - 4 * SF + 28 + 16 - 20 * implicit_header_mode) / (4*(SF - 2*low_data_rate_optimization))), 0.0);
+  double payload_symbol_arg =
+         (8.0 * payload_size - 4.0 * SF + 28.0 + 16.0 - 20.0 * implicit_header_mode) /
+         (4.0 * (SF - 2.0 * low_data_rate_optimization));
+  double number_of_payload_symbols =
+         8.0 + max((coding_rate + 4.0) * ceil(payload_symbol_arg), 0.0);
   double time_for_payload = number_of_payload_symbols * time_per_symbol;
 
   /* Sum it up, converting from seconds to milliseconds and from Double to Int */
-  time_for_packet = (uint16_t) (1000 * (time_for_preamble + time_for_payload));
+  time_for_packet = (uint16_t) ceil(1000.0 * (time_for_preamble + time_for_payload));
   most_recent_airtime = time_for_packet;
 
   return time_for_packet;
