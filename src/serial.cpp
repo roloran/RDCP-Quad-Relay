@@ -12,6 +12,7 @@
 #include "rdcp-csv.h"
 #include "lorawan-tunnel.h"
 // #include <Preferences.h>
+#include "rdcp-dupetable.h"
 
 lora_message lorapacket_in_sim;
 extern da_config CFG;

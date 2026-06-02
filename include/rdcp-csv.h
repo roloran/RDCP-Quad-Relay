@@ -1,3 +1,6 @@
+#ifndef _RDCP_CSV
+#define _RDCP_CSV
+
 #include <Arduino.h>
 
 /**
@@ -20,5 +23,7 @@ void rdcpcsv_logfile_delete(void);
  * Dump the current RDCPCSV logfile.
  */
 void rdcpcsv_logfile_dump(void);
+
+#endif
 
 /* EOF */

@@ -14,6 +14,7 @@
 #include "rdcp-csv.h"
 #include "lorawan-tunnel.h"
 #include "rdcp-roaming-support.h"
+#include "rdcp-dupetable.h"
 
 lora_message current_lora_message;
 extern rdcp_message rdcp_msg_in;

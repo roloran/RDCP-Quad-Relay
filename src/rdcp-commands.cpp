@@ -15,6 +15,7 @@
 #include "hal.h"
 #include "rdcp-callbacks.h"
 #include "unishox2.h"
+#include "rdcp-dupetable.h"
 
 extern lora_message current_lora_message;
 extern rdcp_message rdcp_msg_in;

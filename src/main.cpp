@@ -19,6 +19,7 @@
 #include "rdcp-beacon.h"
 #include "rdcp-roaming-support.h"
 #include "rdcp-localbutton.h"
+#include "rdcp-dupetable.h"
 
 SET_LOOP_TASK_STACK_SIZE(STACK16K); // default of 8 kb is not enough
 

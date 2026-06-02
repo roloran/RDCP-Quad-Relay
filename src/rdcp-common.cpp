@@ -12,7 +12,6 @@ rdcp_message rdcp_msg_in;
 int64_t CFEst[NUMCHANNELS] = {0, 0, 0, 0}; 
 extern da_config CFG; 
 extern lora_message current_lora_message;
-struct rdcp_dup_table dupe_table;              // One global RDCP Message Duplicate Table
 
 uint16_t most_recent_airtime = RDCP_TIMESTAMP_ZERO;
 uint8_t  most_recent_future_timeslots = 0;
@@ -20,9 +19,6 @@ int64_t  contributed_propagation_cycle_end = RDCP_TIMESTAMP_ZERO;
 int64_t  most_recent_mg_sender_end = RDCP_TIMESTAMP_ZERO;
 
 tracked_propagation_cycle propagation_cycles[MAX_TRACKED_PCS];
-
-#define FILENAME_DUPETABLE "/dupetable"
-bool do_not_persist_dupetable = false;
 
 int64_t rdcp_get_channel_free_estimation(uint8_t channel)
 {
@@ -325,153 +321,6 @@ int64_t rdcp_get_timeslot_duration(uint8_t channel, uint8_t *data)
   duration = (nrt+1) * airtime_with_buffer;
 
   return duration;
-}
-
-void rdcp_reset_duplicate_message_table(void)
-{
-  dupe_table.num_entries = 0;
-  for (int i=0; i != NUM_DUPETABLE_ENTRIES; i++)
-  {
-    dupe_table.tableentry[i].origin = RDCP_ADDRESS_SPECIAL_ZERO;
-    dupe_table.tableentry[i].sequence_number = RDCP_SEQUENCENR_SPECIAL_ZERO;
-    dupe_table.tableentry[i].last_seen = RDCP_TIMESTAMP_ZERO;
-  }
-  rdcp_duplicate_table_persist();
-  return;
-}
-
-void rdcp_dump_duplicate_message_table(void)
-{
-  char info[INFOLEN];
-  for (int i=0; i != NUM_DUPETABLE_ENTRIES; i++)
-  {
-    if (dupe_table.tableentry[i].origin == 0) continue;
-    snprintf(info, INFOLEN, "INFO: Dupe table entry %i: %04X with seqnr %04X",
-      i,
-      dupe_table.tableentry[i].origin,
-      dupe_table.tableentry[i].sequence_number);
-    serial_writeln(info);
-  }
-  return;
-}
-
-void rdcp_duplicate_table_restore(void)
-{
-  serial_writeln("INFO: Restoring dupe table");
-#ifdef ROLORAN_USE_FFAT
-  File f = FFat.open(FILENAME_DUPETABLE, FILE_READ);
-#else
-  File f = LittleFS.open(FILENAME_DUPETABLE, FILE_READ);
-#endif
-  if (!f) return;
-  f.read((uint8_t *) &dupe_table, sizeof(dupe_table));
-  f.close();
-  return;
-}
-
-void rdcp_duplicate_table_delete_file(void)
-{
-  serial_writeln("INFO: Deleting duplicate table file");
-  LittleFS.remove(FILENAME_DUPETABLE);
-  return;
-}
-
-void rdcp_duplicate_table_delete_entry(uint16_t origin)
-{
-  for (int i=0; i != dupe_table.num_entries; i++)
-  {
-    if (dupe_table.tableentry[i].origin == origin)
-    {
-      dupe_table.tableentry[i].sequence_number = 0;
-      dupe_table.tableentry[i].last_seen = my_millis();
-      serial_writeln("INFO: Duplicate table entry was reset for given origin");
-    }
-  }
-  return;
-}
-
-void rdcp_duplicate_table_set_entry(uint16_t origin, uint16_t seqnr)
-{
-  for (int i=0; i != dupe_table.num_entries; i++)
-  {
-    if (dupe_table.tableentry[i].origin == origin)
-    {
-      dupe_table.tableentry[i].sequence_number = seqnr;
-      dupe_table.tableentry[i].last_seen = my_millis();
-      serial_writeln("INFO: Duplicate table entry was set for given origin");
-    }
-  }
-  return;
-}
-
-void rdcp_duplicate_table_delete_all_entries(void)
-{
-  for (int i=0; i != dupe_table.num_entries; i++)
-  {
-    dupe_table.tableentry[i].sequence_number = 0;
-    dupe_table.tableentry[i].last_seen = my_millis();
-  }
-  serial_writeln("INFO: Duplicate table entry was reset for all entries");
-  return;
-}
-
-void rdcp_duplicate_table_persist(void)
-{
-  if (do_not_persist_dupetable == true)
-  {
-    serial_writeln("INFO: Refusing to persist duplicate table");
-    return;
-  }
-
-  serial_writeln("INFO: Persisting dupe table");
-#ifdef ROLORAN_USE_FFAT
-  FFat.remove(FILENAME_DUPETABLE);
-  File f = FFat.open(FILENAME_DUPETABLE, FILE_WRITE);
-#else
-  LittleFS.remove(FILENAME_DUPETABLE);
-  File f = LittleFS.open(FILENAME_DUPETABLE, FILE_WRITE);
-#endif
-  if (!f) return;
-  f.write((uint8_t *) &dupe_table, sizeof(dupe_table));
-  f.close();
-  return;
-}
-
-bool rdcp_check_duplicate_message(uint16_t origin, uint16_t sequence_number)
-{
-  int pos = RDCP_INDEX_NONE;
-  for (int i=0; i != dupe_table.num_entries; i++)
-  {
-    if (dupe_table.tableentry[i].origin == origin) pos = i;
-  }
-
-  if (pos == RDCP_INDEX_NONE) // new entry
-  {
-    if (dupe_table.num_entries > NUM_DUPETABLE_ENTRIES-1)
-    {
-      Serial.println("WARNING: RDCP duplicate table overflow - increase size!");
-      return false;
-    }
-    dupe_table.tableentry[dupe_table.num_entries].origin = origin;
-    dupe_table.tableentry[dupe_table.num_entries].sequence_number = sequence_number;
-    dupe_table.tableentry[dupe_table.num_entries].last_seen = my_millis();
-    dupe_table.num_entries++;
-    return false;
-  }
-  else
-  {
-    dupe_table.tableentry[pos].last_seen = my_millis();
-    if (dupe_table.tableentry[pos].sequence_number < sequence_number)
-    { // update highest sequence number
-      dupe_table.tableentry[pos].sequence_number = sequence_number;
-      return false;
-    }
-    else
-    { // duplicate found
-      return true;
-    }
-  }
-  return false;
 }
 
 bool rdcp_check_crc_in(uint8_t real_packet_length)
