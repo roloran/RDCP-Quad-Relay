@@ -527,7 +527,7 @@ void rdcp_reschedule_on_busy_channel(uint8_t channel)
   if (timediff > 0)
   {
     char info[INFOLEN];
-    snprintf(info, INFOLEN, "INFO: Rescheduling CHANNEL" PRIu8 " by %" PRId64 " ms due to timediff CFEst-now", channel, timediff);
+    snprintf(info, INFOLEN, "INFO: Rescheduling CHANNEL%" PRIu8 " by %" PRId64 " ms due to timediff CFEst-now", channel, timediff);
     serial_writeln(info);
 
     rdcp_txqueue_reschedule(channel, timediff);

@@ -202,7 +202,7 @@ void rdcp_callback_txfin(uint8_t channel)
       // and might want to start sending urgent messages. Thus, as we just used
       // the channel for ourselves for some time, give them a chance.
       int64_t my_delay = 1 * SECONDS_TO_MILLISECONDS + 100 * (1 + CFG.relay_identifier) * CFG.sf_multiplier;
-      snprintf(buf, INFOLEN, "INFO: Rescheduling CHANNEL" PRIu8 " by %" PRId64 " ms due to finished transmission", channel, my_delay);
+      snprintf(buf, INFOLEN, "INFO: Rescheduling CHANNEL%" PRIu8 " by %" PRId64 " ms due to finished transmission", channel, my_delay);
       serial_writeln(buf);
       rdcp_txqueue_reschedule(channel, 0 - my_delay);
     }
