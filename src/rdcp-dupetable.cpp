@@ -311,6 +311,8 @@ void rdcp_duplicate_table_persist(void)
 
 bool rdcp_check_duplicate_message(uint16_t origin, uint16_t sequence_number)
 {
+  if (!spw.initialized) rdcp_spw_init();
+
   int pos = RDCP_INDEX_NONE;
   for (int i=0; i != dupe_table.num_entries; i++)
   {
@@ -324,10 +326,14 @@ bool rdcp_check_duplicate_message(uint16_t origin, uint16_t sequence_number)
       Serial.println("WARNING: RDCP duplicate table overflow - increase size!");
       return false;
     }
+
     dupe_table.tableentry[dupe_table.num_entries].origin = origin;
     dupe_table.tableentry[dupe_table.num_entries].sequence_number = sequence_number;
     dupe_table.tableentry[dupe_table.num_entries].last_seen = my_millis();
     dupe_table.num_entries++;
+
+    rdcp_spw_set_entry(origin, sequence_number); // Add seen message to SPW
+
     return false;
   }
   else
@@ -336,6 +342,7 @@ bool rdcp_check_duplicate_message(uint16_t origin, uint16_t sequence_number)
     if (dupe_table.tableentry[pos].sequence_number < sequence_number)
     { // update highest sequence number
       dupe_table.tableentry[pos].sequence_number = sequence_number;
+      rdcp_spw_set_entry(origin, sequence_number); // Add seen message to SPW
       return false;
     }
     else
@@ -350,25 +357,31 @@ bool rdcp_check_duplicate_message(uint16_t origin, uint16_t sequence_number)
         this is a duplicate for sure, no need to check SPW.
       */
       if (dupe_table.tableentry[pos].sequence_number == sequence_number) 
+      {
+        rdcp_spw_set_entry(origin, sequence_number); // Add seen message to SPW
         return true;
+      }
 
       /* 
         2)
         MGs are exempted from SPW checking as CIRE reordering railguards are in place. 
       */
       if (RDCP_ADDRESS_MG_LOWERBOUND < origin) 
-        return true;
+      {
+        return true; // no need to add to SPW as SPW check will always be skipped for devices in higher RDCP address range
+      }
 
       /*
         3)
         If the sequence number to check is way too old, the message is considered a sure duplicate.
       */
       if (sequence_number + SPW_MAXIMUM_DIFFERENCE < dupe_table.tableentry[pos].sequence_number) 
-        return true;
+      {
+        return true; // no need to pollute SPW with sequence numbers that are too old anyway
+      }
 
-      /*  Finally check SPW and use its result. */
+      /*  Finally check SPW, implicitly store the new message metadata, and use the check's result. */
       bool spw_state = rdcp_spw_check_and_add(origin, sequence_number);
-
       return spw_state;
     }
   }
