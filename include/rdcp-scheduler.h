@@ -12,6 +12,7 @@ struct txqueue_entry {
   uint8_t payload_length                                    = 0;                   //< length of the outgoing message
   int64_t currently_scheduled_time                          = RDCP_TIMESTAMP_ZERO; //< timestamp when to transmit
   int64_t originally_scheduled_time                         = RDCP_TIMESTAMP_ZERO; //< timestamp when originally planned to transmit
+  uint64_t ordering_number                                  = COUNT_ZERO;          //< monotonic increasing number for waiting entries
   uint8_t num_of_reschedules                                = 0;                   //< how often the entry has already been rescheduled
   bool important                                            = false;               //< message is important and should not be dropped even it if takes longer
   bool force_tx                                             = false;               //< indicator whether message should be sent independend of CAD status
