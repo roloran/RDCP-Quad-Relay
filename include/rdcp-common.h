@@ -84,6 +84,9 @@
 #define TRANSMISSION_PROCESSING_TIME 300
 // History: 200
 
+/// After how many minutes do we assume that the HQ has chosen a non-working EP if we did not hear HQ messages on 433 MHz?
+#define TIMEOUT_ASSUME_NONWORKING_EP_FOR_HQ 20 
+
 /**
   * Data structure for an RDCP v0.4 Header
   */

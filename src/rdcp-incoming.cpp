@@ -27,10 +27,13 @@ uint16_t last_seqnr[NUMCHANNELS]  = { RDCP_SEQUENCENR_SPECIAL_ZERO, RDCP_SEQUENC
 bool currently_in_fetch_mode = false;
 char serial_info[INFOLEN];
 extern int64_t last_heartbeat_sent;
+int64_t timestamp_last_hqdev_seen_via_ep = RDCP_TIMESTAMP_ZERO;
 
 void rdcp_handle_incoming_lora_message(void)
 {
     cpu_fast();
+
+    int64_t now = my_millis();
     
     if (current_lora_message.channel == CHANNEL868LW)
     {
@@ -86,7 +89,7 @@ void rdcp_handle_incoming_lora_message(void)
         return;
     }
 
-    /* Completely ignore selected messages */
+    /* Completely ignore selected messages on selected channels */
     if (current_lora_message.channel == CHANNEL868DA)
     {
         /* Ignore area-local messages such as DA-ACKs and Roaming Beacons sent by other DAs on CHANNEL868DA */
@@ -97,7 +100,41 @@ void rdcp_handle_incoming_lora_message(void)
             {
                 return;
             }
-        } 
+        }
+    }
+    if (current_lora_message.channel == CHANNEL868MG)
+    {
+        /*
+          To avoid RDCP Message reordering issues for messages by HQ devices, we ignore them unless we are either
+          the designated entry point or we deem shadow-forwarding them necessary based on the assumption that the
+          HQ has not chosen a working entry point.
+        */
+        if ((rdcp_msg_in.header.origin == rdcp_msg_in.header.sender) && // received directly from origin and 
+            (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))  // origin presumably is an HQ device
+        {
+            if (rdcp_check_entrypoint_designation() == false) // we are NOT the designated entry point for this message
+            {
+                if (now - timestamp_last_hqdev_seen_via_ep > TIMEOUT_ASSUME_NONWORKING_EP_FOR_HQ * MINUTES_TO_MILLISECONDS)
+                { // We have not seen a properly forwarded message for a too long time, so we proceed as usual
+                    serial_writeln("INFO: Assuming that RDCP Message from HQ device requires shadow propagation");
+                }
+                else 
+                { // Proper forwarding of HQ messages appears to work fine, so we completely ignore the received messages 
+                  // by returning from this function, without registering the message for dupe table/SPW and further processing it.
+                    serial_writeln("INFO: Skipping shadow propagation for HQ message, expecting proper propagation following");
+                    return;
+                }
+            }
+        }
+    }
+
+    /* Register RDCP Messages sent by an HQ device as Origin that are properly forwarded on 433 MHz */
+    if (current_lora_message.channel == CHANNEL433)
+    {
+        if (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND)
+        {
+            timestamp_last_hqdev_seen_via_ep = now;
+        }
     }
 
     /* Check for Red CIRE Button activity */
@@ -271,7 +308,7 @@ void rdcp_handle_incoming_lora_message(void)
                         (rdcp_msg_in.header.sender >= RDCP_ADDRESS_MG_LOWERBOUND))
                     { 
                         int64_t cfest_max = rdcp_get_channel_free_estimation(CHANNEL868DA); 
-                        int64_t now = my_millis();
+                        now = my_millis(); // refresh timestamp
                         if (now > cfest_max) cfest_max = now;
                         rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
                         rdcp_txqueue_reschedule(CHANNEL868DA, 0);
