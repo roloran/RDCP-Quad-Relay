@@ -98,6 +98,33 @@ void rdcp_handle_incoming_lora_message(void)
         {
             if ((rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND) && (rdcp_msg_in.header.origin < RDCP_ADDRESS_MG_LOWERBOUND))
             {
+                if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK) print_rdcp_csv(); // preserve telemetry data for DA ACKs
+                return;
+            }
+        }
+        /*
+            MGs are expected to uplink to us on the other channel, CHANNEL868MG, not here on CHANNEL868DA.
+            Thus, we want to strictly ignore HQ devices sending on the wrong channel, and mostly ignore other MGs
+            on this wrong channel as well, but still shadow-forward or EP-process legacy MGs sending a CIRE.
+        */
+       if ((rdcp_msg_in.header.origin == rdcp_msg_in.header.sender) && 
+           (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
+        {
+            serial_writeln("WARNING: HQ device is sending an uplink message on downlink channel, ignoring");
+            print_rdcp_csv(); // preserve telemetry data
+            return;
+        }
+       if ((rdcp_msg_in.header.origin == rdcp_msg_in.header.sender) && 
+           (rdcp_msg_in.header.origin >= RDCP_ADDRESS_MG_LOWERBOUND))
+        {
+            if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT)
+            {
+                serial_writeln("WARNING: Legacy MG device sends CIRE on downlink channel instead of uplink channel. Processing it."); 
+            }
+            else 
+            {
+                serial_writeln("WARNING: Legacy MG device is sending a non-CIRE uplink message on downlink channel, ignoring");
+                print_rdcp_csv(); // preserve telemetry data
                 return;
             }
         }
