@@ -62,7 +62,7 @@ int schnorr_create_signature(uint8_t *data, uint8_t datalen, uint8_t *targetbuff
   if (res != RESULT_OK)
   {
     char buf[2*INFOLEN];
-    snprintf(buf, 2*INFOLEN, "ERROR: schnorr_create_signature() could not initialize with private key %s", CFG.myprivkey);
+    snprintf(buf, 2*INFOLEN, "ERROR: schnorr_create_signature() could not initialize with given private key");
     serial_writeln(buf);
     return RESULT_FAIL;
   }

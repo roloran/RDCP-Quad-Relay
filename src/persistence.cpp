@@ -13,6 +13,7 @@
 #define FILENAME_PREFIX_SEQNR_NEW "/nseqnr_"
 
 bool hasFFat = false;
+extern rdcp_message rdcp_msg_in;
 
 bool hasStorage(void)
 {
@@ -142,8 +143,10 @@ bool persistence_checkset_nonce(char *name, uint16_t nonce)
 {
   if (!hasFFat) return false;
   bool is_valid = false;
-  char filename[INFOLEN];
-  snprintf(filename, INFOLEN, "/%s.nce", name);
+  char filename[INFOLEN], filename_new[INFOLEN];
+  snprintf(filename, INFOLEN, "/%s-%04X-%" PRIu8 ".nce", 
+    name, rdcp_msg_in.header.origin, rdcp_msg_in.header.message_type);
+  snprintf(filename_new, INFOLEN, "%sn", filename);
 #ifdef ROLORAN_USE_FFAT
   File f = FFat.open(filename, FILE_READ);
 #else
@@ -178,7 +181,7 @@ bool persistence_checkset_nonce(char *name, uint16_t nonce)
 #ifdef ROLORAN_USE_FFAT
     f = FFat.open(filename, FILE_WRITE);
 #else
-    f = LittleFS.open(filename, FILE_WRITE);
+    f = LittleFS.open(filename_new, FILE_WRITE);
 #endif
     if (!f) 
     { 
@@ -189,6 +192,8 @@ bool persistence_checkset_nonce(char *name, uint16_t nonce)
     snprintf(content, INFOLEN, "%" PRIu16 "\n", nonce);
     f.print(content);
     f.close();
+    if (LittleFS.exists(filename)) LittleFS.remove(filename);
+    LittleFS.rename(filename_new, filename);
   }
   return is_valid;
 }

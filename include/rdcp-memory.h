@@ -13,6 +13,7 @@ struct rdcp_memory_entry {
     uint8_t payload_length    = 0;
     uint16_t reference_number = RDCP_OA_REFNR_SPECIAL_ZERO;
     int64_t timestamp_added   = RDCP_TIMESTAMP_ZERO;
+    uint8_t more_fragments    = COUNT_ZERO;
     bool used_in_fetch_single = false;
     bool used_in_fetch_all    = false;
     bool used_in_periodic868  = false;

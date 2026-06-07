@@ -25,10 +25,13 @@ void rdcp_memory_remember(void)
     /* Check for duplicates. Only store unique memories. */
     bool is_dupe = false;
     uint16_t this_refnr = RDCP_OA_REFNR_SPECIAL_ZERO;
+    uint8_t this_more_fragments = COUNT_ZERO;
+
     if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_OFFICIAL_ANNOUNCEMENT)
     {
-        if (rdcp_msg_in.header.rdcp_payload_length < 3) return; 
+        if (rdcp_msg_in.header.rdcp_payload_length < 6) return; 
         this_refnr = rdcp_msg_in.payload.data[1] + 256 * rdcp_msg_in.payload.data[2];
+        this_more_fragments = rdcp_msg_in.payload.data[5];
     }
     else if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_SIGNATURE)
     {
@@ -40,7 +43,8 @@ void rdcp_memory_remember(void)
     {
         if (
             (mem.entries[i].reference_number == this_refnr) &&
-            (mem.entries[i].payload_length == this_size)
+            (mem.entries[i].payload_length == this_size) &&
+            (mem.entries[i].more_fragments == this_more_fragments)
         ) is_dupe = true;
     }
     if (is_dupe)
@@ -96,6 +100,7 @@ void rdcp_memory_remember(void)
         refnr = rdcp_msg_in.payload.data[0] + 256 * rdcp_msg_in.payload.data[1];
     }
     mem.entries[index].reference_number = refnr;
+    mem.entries[index].more_fragments = this_more_fragments;
     mem.entries[index].timestamp_added = my_millis();
 
     return;
@@ -108,6 +113,7 @@ void rdcp_memory_forget(void)
         mem.entries[i].slot_used = false;
         mem.entries[i].timestamp_added = RDCP_TIMESTAMP_ZERO;
         mem.entries[i].reference_number = RDCP_OA_REFNR_SPECIAL_ZERO;
+        mem.entries[i].more_fragments = COUNT_ZERO;
         mem.entries[i].payload_length = 0;
         mem.entries[i].used_in_fetch_all = false;
         mem.entries[i].used_in_fetch_single = false;
@@ -129,7 +135,9 @@ void rdcp_memory_dump(void)
     {
         if (mem.entries[i].slot_used)
         {
-            snprintf(info, INFOLEN, "INFO: Memory %02d,%03d,%04X,", i, mem.entries[i].payload_length, mem.entries[i].reference_number);
+            snprintf(info, INFOLEN, "INFO: Memory %02d,%" PRIu8 ",%04X-%" PRIu8 ",", 
+                i, mem.entries[i].payload_length, mem.entries[i].reference_number,
+            mem.entries[i].more_fragments);
             serial_write(info);
             serial_write_base64((char *)mem.entries[i].payload, mem.entries[i].payload_length, true);
         }

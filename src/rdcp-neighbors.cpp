@@ -16,7 +16,7 @@ void rdcp_neighbor_register_rx(uint8_t channel, uint16_t sender, double rssi, do
     }
 
     int index = RDCP_INDEX_NONE;
-    for (int i=0; i<MAX_NEIGHBORS; i++)
+    for (int i=COUNT_ZERO; i<MAX_NEIGHBORS; i++)
     {
         if ((neighbors[i].sender == RDCP_ADDRESS_SPECIAL_ZERO) || (neighbors[i].sender == used_sender))
         {
@@ -27,8 +27,26 @@ void rdcp_neighbor_register_rx(uint8_t channel, uint16_t sender, double rssi, do
 
     if (index == RDCP_INDEX_NONE)
     {
-        serial_writeln("WARNING: Neighbor table overflow - increase size!");
-        return;
+        serial_writeln("WARNING: Neighbor table overflow - increase size! Overwriting oldest MG entry.");
+        int oldest = RDCP_INDEX_NONE;
+        for (int i=COUNT_ZERO; i<MAX_NEIGHBORS; i++)
+        {
+            if ((oldest == RDCP_INDEX_NONE) ||
+                (neighbors[i].timestamp < neighbors[oldest].timestamp)
+               )
+            {
+                if (neighbors[i].sender >= RDCP_ADDRESS_MG_LOWERBOUND)
+                {
+                    oldest = i;
+                }
+            }
+        }
+        index = oldest;
+        if (index == RDCP_INDEX_NONE)
+        {
+            serial_writeln("WARNING: No neighbor entry to evict found, not registering");
+            return;
+        }
     }
 
     neighbors[index].channel   = channel;

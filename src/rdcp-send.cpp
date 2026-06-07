@@ -108,6 +108,8 @@ void rdcp_callback_txfin(uint8_t channel)
     if (channel >= NUMCHANNELSTXQ) return;
     char buf[INFOLEN];
 
+    if (tx_ongoing[channel] == -1) return;
+
     if (channel == CHANNEL868DA) roaming_support_register_own_tx();
 
     last_tx_activity[channel] = my_millis();
@@ -217,6 +219,8 @@ bool rdcp_callback_cad(uint8_t channel, bool cad_busy)
     char buf[INFOLEN];
   
     last_tx_activity[channel] = my_millis();
+
+    if (tx_ongoing[channel] == -1) return false;
   
     txq[channel].entries[tx_ongoing[channel]].cad_retry += 1;
     uint8_t retry = txq[channel].entries[tx_ongoing[channel]].cad_retry;

@@ -201,7 +201,7 @@ void rdcp_chain_callback(uint8_t callback_type, bool has_timeout)
         { // Request could not be fulfilled due to busy channel. Try to send receipt at least.
             rdcp_send_delivery_receipt(CC[TX_CALLBACK_FETCH_SINGLE].destination);
             CC[TX_CALLBACK_FETCH_SINGLE].in_use = false;
-            for (int i=1; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_fetch_single = false;
+            for (int i=COUNT_ZERO; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_fetch_single = false;
             return;
         }
         /* 
@@ -237,7 +237,7 @@ void rdcp_chain_callback(uint8_t callback_type, bool has_timeout)
         { // no more memories to send -> conclude the chain
             rdcp_send_delivery_receipt(CC[TX_CALLBACK_FETCH_SINGLE].destination);
             CC[TX_CALLBACK_FETCH_SINGLE].in_use = false;
-            for (int i=1; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_fetch_single = false;
+            for (int i=COUNT_ZERO; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_fetch_single = false;
         }
     }
 
@@ -247,7 +247,7 @@ void rdcp_chain_callback(uint8_t callback_type, bool has_timeout)
         { // Request could not be fulfilled due to busy channel. Try to send receipt at least.
             rdcp_send_delivery_receipt(CC[TX_CALLBACK_FETCH_ALL].destination);
             CC[TX_CALLBACK_FETCH_ALL].in_use = false;
-            for (int i=1; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_fetch_all = false;
+            for (int i=COUNT_ZERO; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_fetch_all = false;
             return;
         }
         /* 
@@ -282,7 +282,7 @@ void rdcp_chain_callback(uint8_t callback_type, bool has_timeout)
         { // no more memories to send -> conclude the chain
             rdcp_send_delivery_receipt(CC[TX_CALLBACK_FETCH_ALL].destination);
             CC[TX_CALLBACK_FETCH_ALL].in_use = false;
-            for (int i=1; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_fetch_all = false;
+            for (int i=COUNT_ZERO; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_fetch_all = false;
         }        
     }
 
@@ -291,7 +291,7 @@ void rdcp_chain_callback(uint8_t callback_type, bool has_timeout)
         if (has_timeout)
         { // Chain cannot be completed due to busy channel
             CC[TX_CALLBACK_PERIODIC868].in_use = false;
-            for (int i=1; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_periodic868 = false;
+            for (int i=COUNT_ZERO; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_periodic868 = false;
             last_periodic_chain_finish = my_millis();
             return;
         }
@@ -338,7 +338,7 @@ void rdcp_chain_callback(uint8_t callback_type, bool has_timeout)
         else
         { // no more memories to send -> conclude the chain
             CC[TX_CALLBACK_PERIODIC868].in_use = false;
-            for (int i=1; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_periodic868 = false;
+            for (int i=COUNT_ZERO; i < MAX_STORED_MSGS; i++) mem.entries[i].used_in_periodic868 = false;
             last_periodic_chain_finish = my_millis();
         }        
     }

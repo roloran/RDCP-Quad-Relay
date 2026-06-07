@@ -946,6 +946,10 @@ void rdcp_send_cire(uint8_t subtype, uint16_t refnr, char *content)
     char buf[INFOLEN];
     unsigned int len = strlen(content);
     memset(buf, 0, sizeof(buf));
+    /* 
+        DA must already have ensured that Unishox2-compressed CIRE content fits 
+        into a single RDCP CIRE Message, so we may use the simple API functions.
+    */
     int c_total = unishox2_compress_simple(content, len, buf);
 
     if (c_total > RDCP_MAX_INNER_PAYLOAD_SIZE - RDCP_PAYLOAD_SIZE_SUBHEADER_CIRE - RDCP_AESTAG_SIZE)

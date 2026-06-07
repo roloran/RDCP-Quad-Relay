@@ -37,7 +37,7 @@ void roaming_support_check_and_send_beacon(void)
   /* Do not send roaming beacon if we transmitted less than a minute ago ourselves */
   if (now - timestamp_last_own_tx_channel868da < 1 * MINUTES_TO_MILLISECONDS) return;
 
-  /* Do not send roaming beacon if no MG has sent a hearbeat for clearly more than half an hour */
+  /* Do not send roaming beacon if no MG has sent a heartbeat for clearly more than half an hour */
   if (now - timestamp_last_mg_heartbeat > 35 * MINUTES_TO_MILLISECONDS) return;
 
   /* Do not send roaming beacons too often */
@@ -45,8 +45,11 @@ void roaming_support_check_and_send_beacon(void)
 
   timestamp_last_beacon_triggered = now;
 
+  /* Do not send if the channel is busy with other RDCP Messages */
+  if (rdcp_get_channel_free_estimation(CHANNEL868DA) > now) return;
+
   /* Skip sending the roaming beacon if other transmissions on CHANNEL868DA are upcoming already anyway */
-  if (get_num_txq_entries(CHANNEL868DA) > 0) return;
+  if (get_num_txq_entries(CHANNEL868DA) > COUNT_ZERO) return;
 
   rdcp_send_roaming_beacon();
 

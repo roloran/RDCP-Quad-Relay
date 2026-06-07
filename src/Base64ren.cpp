@@ -111,7 +111,7 @@ int Base64Classren::decodedLength(char * input, int inputLength) {
 	int i = 0;
 	int numEq = 0;
 	if (inputLength == 0) return 0;
-	for(i = inputLength - 1; input[i] == '='; i--) {
+	for(i = inputLength - 1; ((i>=0) && (input[i] == '=')); i--) {
 		if (i == -1) return 0;
 		numEq++;
 	}
