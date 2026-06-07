@@ -12,6 +12,8 @@ device_block_entry BLOCKED[MAX_DEVICE_BLOCKS];
 
 bool rdcp_relay_allowed_for_device(uint16_t origin)
 {
+    if (origin == RDCP_ADDRESS_SPECIAL_ZERO) return false;
+    
     for (int i=0; i<MAX_DEVICE_BLOCKS; i++)
     {
         if (BLOCKED[i].address == origin)

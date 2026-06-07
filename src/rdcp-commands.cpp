@@ -179,8 +179,11 @@ void rdcp_cmd_send_da_status_response(bool unsolicited = false)
         {
             serial_writeln("WARNING: Malformed DA Status Request received");
             return;
-        } 
-        want_reset = rdcp_msg_in.payload.data[0];
+        }
+        if (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND)
+        { // honor any reset requests only when DA Status Request is from an HQ device
+            want_reset = rdcp_msg_in.payload.data[0];
+        }
     }
 
     last_dasresp_sent = my_millis(); // Track when we sent the most recent DA Status Response

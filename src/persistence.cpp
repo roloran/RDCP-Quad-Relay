@@ -100,6 +100,13 @@ uint16_t get_next_rdcp_sequence_number(uint16_t origin)
   f.close();
   if (seq == 0) serial_writeln("WARNING: Existing sequence number file yielded 0");
   set_next_rdcp_sequence_number(origin, seq+1);
+  /*
+    Note that HQ devices track telemetry data and also identify issues with 
+    DAs whose sequence number has wrapped around and gets stuck in other devices' 
+    duplicate filtering mechanism. RDCP Resets of Infrastructure are carried out
+    in time. Usually, HQ devices are the first ones to exhause their SeqNr 
+    range, so this is pragmatically considered a non-issue for DAs.
+  */
   return seq;
 }
 

@@ -190,8 +190,26 @@ void rdcp_handle_incoming_lora_message(void)
     /* Update the CFEst since we received an RDCP Message; parameters for 433 MHz propagation cycle tracking only */
     rdcp_update_cfest_in(rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number);
 
-    /* Stop any TX events on the current channel as long as it is busy */
-    if ((rdcp_msg_in.header.origin != last_origin[current_lora_message.channel]) && (rdcp_msg_in.header.sequence_number != last_seqnr[current_lora_message.channel]))
+    /* 
+        Stop any TX events on the current channel as long as it is busy. 
+        However, approximate limiting rescheduling to only once for each RDCP Message 
+        and not for each of its retransmissions. Thus, if we have seen the same Origin 
+        and SeqNr just before, do not reschedule again. 
+        Rescheduling this way will be based on the offset "CFEst - now()", so it 
+        will converge to zero when called repeatedly for alternating RDCP Message 
+        retransmissions. In such cases of indeterministic propagation cycle clashes,
+        backing off from the channel may contribute to resolving the clash, and 
+        TX Queue compression will step in when the channel is free for some time.
+        Note that in our multi-channel setup, this simplified check is not 
+        equivalent to duplicate checking, as we need to reschedule on a per-channel
+        and not a per-message basis.
+    */
+    if ((rdcp_msg_in.header.origin == last_origin[current_lora_message.channel]) && 
+        (rdcp_msg_in.header.sequence_number == last_seqnr[current_lora_message.channel]))
+    {
+        /* Do not reschedule again */
+    }
+    else
     {
         last_origin[current_lora_message.channel] = rdcp_msg_in.header.origin;
         last_seqnr[current_lora_message.channel] = rdcp_msg_in.header.sequence_number;
@@ -257,6 +275,12 @@ void rdcp_handle_incoming_lora_message(void)
     if (!duplicate)
     {
         DART.num_rdcp_rx++;
+
+        if (!rdcp_relay_allowed_for_device(rdcp_msg_in.header.origin))
+        { /* Avoid forwarding and shadow-propagation for blocked devices even as non-EP */
+            serial_writeln("WARNING: Not processing message from blocked device origin any further");
+            return;
+        }
 
         if (current_lora_message.channel == CHANNEL433)
         {

@@ -57,10 +57,10 @@ volatile bool transmissionFlag433   = false;
 volatile bool transmissionFlag868da = false;
 volatile bool transmissionFlag868mg = false;
 volatile bool transmissionFlag868lw = false;
-int transmissionState433   = 0;
-int transmissionState868da = 0;
-int transmissionState868mg = 0;
-int transmissionState868lw = 0;
+int16_t transmissionState433   = 0;
+int16_t transmissionState868da = 0;
+int16_t transmissionState868mg = 0;
+int16_t transmissionState868lw = 0;
 int64_t startOfTransmission433   = 0;
 int64_t startOfTransmission868da = 0;
 int64_t startOfTransmission868mg = 0;
@@ -126,7 +126,14 @@ int start_send_868da(const uint8_t* data, size_t len)
   delay(1);
   if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
   {
-    return radio868da.startTransmit(data, len);
+    int16_t rl_status = radio868da.startTransmit(data, len);
+    if (rl_status != RADIOLIB_ERR_NONE)
+    {
+      serial_writeln("WARNING: RadioLib startTransmit() failed, resetting radio");
+      reset_radio(CHANNEL868DA);
+      rl_status = radio868da.startTransmit(data, len);
+    }
+    return rl_status;
   }
   else 
   {
@@ -143,7 +150,14 @@ int start_send_868mg(const uint8_t* data, size_t len)
   delay(1);
   if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
   {
-    return radio868mg.startTransmit(data, len);
+    int16_t rl_status = radio868mg.startTransmit(data, len);
+    if (rl_status != RADIOLIB_ERR_NONE)
+    {
+      serial_writeln("WARNING: RadioLib startTransmit() failed, resetting radio");
+      reset_radio(CHANNEL868MG);
+      rl_status = radio868mg.startTransmit(data, len);
+    }
+    return rl_status;
   }
   else 
   {
@@ -160,7 +174,14 @@ int start_send_868lw(const uint8_t* data, size_t len)
   delay(1);
   if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
   {
-    return radio868lw.startTransmit(data, len);
+    int16_t rl_status = radio868lw.startTransmit(data, len);
+    if (rl_status != RADIOLIB_ERR_NONE)
+    {
+      serial_writeln("WARNING: RadioLib startTransmit() failed, resetting radio");
+      reset_radio(CHANNEL868LW);
+      rl_status = radio868lw.startTransmit(data, len);
+    }
+    return rl_status;
   }
   else 
   {
@@ -169,7 +190,7 @@ int start_send_868lw(const uint8_t* data, size_t len)
   }
 }
 
-int start_send_433(const uint8_t* data, size_t len)
+int16_t start_send_433(const uint8_t* data, size_t len)
 {
   digitalWrite(RADIO433RXEN, LOW);
   delay(1);
@@ -177,7 +198,14 @@ int start_send_433(const uint8_t* data, size_t len)
   delay(1);
   if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
   {
-    return radio433.startTransmit(data, len);
+    int16_t rl_status = radio433.startTransmit(data, len);
+    if (rl_status != RADIOLIB_ERR_NONE)
+    {
+      serial_writeln("WARNING: RadioLib startTransmit() failed, resetting radio");
+      reset_radio(CHANNEL433);
+      rl_status = radio433.startTransmit(data, len);
+    }
+    return rl_status;
   }
   else 
   {
@@ -186,7 +214,7 @@ int start_send_433(const uint8_t* data, size_t len)
   }
 }
 
-int start_send(uint8_t channel, const uint8_t* data, size_t len)
+int16_t start_send(uint8_t channel, const uint8_t* data, size_t len)
 {
   if (channel == CHANNEL433) return start_send_433(data, len);
   else if (channel == CHANNEL868DA) return start_send_868da(data, len);
@@ -719,7 +747,7 @@ void loop_radio(void)
 
         startOfTransmission433 = my_millis();
         transmissionState433 = start_send_433(lora_queue_out[CHANNEL433].payload, lora_queue_out[CHANNEL433].payload_length);
-        msgOnTheWay433 = true;
+        if (transmissionState433 == RADIOLIB_ERR_NONE) msgOnTheWay433 = true;
         enableInterrupt433 = true;
       }
     }
@@ -826,7 +854,7 @@ void loop_radio(void)
 
         startOfTransmission868da = my_millis();
         transmissionState868da = start_send_868da(lora_queue_out[CHANNEL868DA].payload, lora_queue_out[CHANNEL868DA].payload_length);
-        msgOnTheWay868da = true;
+        if (transmissionState868da == RADIOLIB_ERR_NONE) msgOnTheWay868da = true;
         enableInterrupt868da = true;
       }
     }
@@ -933,7 +961,7 @@ void loop_radio(void)
 
         startOfTransmission868mg = my_millis();
         transmissionState868mg = start_send_868mg(lora_queue_out[CHANNEL868MG].payload, lora_queue_out[CHANNEL868MG].payload_length);
-        msgOnTheWay868mg = true;
+        if (transmissionState868mg == RADIOLIB_ERR_NONE) msgOnTheWay868mg = true;
         enableInterrupt868mg = true;
       }
     }
@@ -1040,7 +1068,7 @@ void loop_radio(void)
 
         startOfTransmission868lw = my_millis();
         transmissionState868lw = start_send_868lw(lora_queue_out[CHANNEL868LW].payload, lora_queue_out[CHANNEL868LW].payload_length);
-        msgOnTheWay868lw = true;
+        if (transmissionState868lw == RADIOLIB_ERR_NONE) msgOnTheWay868lw = true;
         enableInterrupt868lw = true;
       }
     }
