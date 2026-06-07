@@ -8,8 +8,9 @@
 #include <LittleFS.h>
 #endif
 
-#define FILENAME_SERIAL_REPLAY "/config.txt"
-#define FILENAME_PREFIX_SEQNR "/seqnr_"
+#define FILENAME_SERIAL_REPLAY    "/config.txt"
+#define FILENAME_PREFIX_SEQNR     "/seqnr_"
+#define FILENAME_PREFIX_SEQNR_NEW "/nseqnr_"
 
 bool hasFFat = false;
 
@@ -105,16 +106,17 @@ uint16_t get_next_rdcp_sequence_number(uint16_t origin)
 uint16_t set_next_rdcp_sequence_number(uint16_t origin, uint16_t seq)
 {
   if (!hasFFat) return seq;
-  char fn[INFOLEN];
+  char fn[INFOLEN], fn2[INFOLEN];
   snprintf(fn, INFOLEN, "INFO: Persisting next-up seqnr %u for %04X", seq, origin);
   serial_writeln(fn);
   snprintf(fn, INFOLEN, "%s%04X", FILENAME_PREFIX_SEQNR, origin);
+  snprintf(fn2, INFOLEN, "%s%04X", FILENAME_PREFIX_SEQNR_NEW, origin);
 #ifdef ROLORAN_USE_FFAT
   FFat.remove(fn);
   File f = FFat.open(fn, FILE_WRITE);
 #else
-  LittleFS.remove(fn);
-  File f = LittleFS.open(fn, FILE_WRITE);
+  if (LittleFS.exists(fn2)) LittleFS.remove(fn2);
+  File f = LittleFS.open(fn2, FILE_WRITE);
 #endif
   if (!f) return seq;
   char content[INFOLEN];
@@ -122,6 +124,10 @@ uint16_t set_next_rdcp_sequence_number(uint16_t origin, uint16_t seq)
   f.print(content);
   f.close();
   delay(1);
+  if (LittleFS.exists(fn)) LittleFS.remove(fn);
+  LittleFS.rename(fn2, fn);
+  delay(1);
+
   return seq;
 }
 

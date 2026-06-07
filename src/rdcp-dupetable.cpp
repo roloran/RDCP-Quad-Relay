@@ -10,8 +10,10 @@
 #endif
 
 struct rdcp_dup_table dupe_table;              // One global RDCP Message Duplicate Table
-#define FILENAME_DUPETABLE "/dupetable"
-#define FILENAME_SPW       "/dupespw"
+#define FILENAME_DUPETABLE     "/dupetable"
+#define FILENAME_DUPETABLE_NEW "/dupetable.new"
+#define FILENAME_SPW           "/dupespw"
+#define FILENAME_SPW_NEW       "/dupespw.new"
 bool do_not_persist_dupetable = false;
 
 struct sliding_prune_window spw;
@@ -48,12 +50,15 @@ void rdcp_spw_persist(void)
   FFat.remove(FILENAME_SPW);
   File f = FFat.open(FILENAME_SPW, FILE_WRITE);
 #else
-  LittleFS.remove(FILENAME_SPW);
-  File f = LittleFS.open(FILENAME_SPW, FILE_WRITE);
+  if (LittleFS.exists(FILENAME_SPW_NEW)) LittleFS.remove(FILENAME_SPW_NEW);
+  File f = LittleFS.open(FILENAME_SPW_NEW, FILE_WRITE);
 #endif
   if (!f) return;
   f.write((uint8_t *) &spw, sizeof(spw));
   f.close();
+
+  if (LittleFS.exists(FILENAME_SPW)) LittleFS.remove(FILENAME_SPW);
+  LittleFS.rename(FILENAME_SPW_NEW, FILENAME_SPW);
 
   return;
 }
@@ -82,6 +87,18 @@ void rdcp_spw_restore(void)
   if (!f) return;
   f.read((uint8_t *) &spw, sizeof(spw));
   f.close();
+
+  if (spw.initialized != true)
+  {
+    serial_writeln("INFO: No valid SPW file found, initializing new SPW");
+    rdcp_spw_init();
+  }
+  if ((spw.front >= SLIDING_PRUNE_WINDOW_NUMBER_OF_ENTRIES) || (spw.front < 0))
+  {
+    serial_writeln("WARNING: Front index in SPW file exceeds maximum - resetting SPW");
+    rdcp_spw_reset();
+  }
+
   return;
 }
 
@@ -228,6 +245,12 @@ void rdcp_duplicate_table_restore(void)
   f.read((uint8_t *) &dupe_table, sizeof(dupe_table));
   f.close();
 
+  if (dupe_table.num_entries > NUM_DUPETABLE_ENTRIES)
+  {
+    serial_writeln("WARNING: Number of entries in dupe table file exceeds maximum - resetting dupe table");
+    rdcp_reset_duplicate_message_table();
+  }
+
   rdcp_spw_restore();
 
   return;
@@ -296,12 +319,15 @@ void rdcp_duplicate_table_persist(void)
   FFat.remove(FILENAME_DUPETABLE);
   File f = FFat.open(FILENAME_DUPETABLE, FILE_WRITE);
 #else
-  LittleFS.remove(FILENAME_DUPETABLE);
-  File f = LittleFS.open(FILENAME_DUPETABLE, FILE_WRITE);
+  if (LittleFS.exists(FILENAME_DUPETABLE_NEW)) LittleFS.remove(FILENAME_DUPETABLE_NEW);
+  File f = LittleFS.open(FILENAME_DUPETABLE_NEW, FILE_WRITE);
 #endif
   if (!f) return;
   f.write((uint8_t *) &dupe_table, sizeof(dupe_table));
   f.close();
+
+  if (LittleFS.exists(FILENAME_DUPETABLE)) LittleFS.remove(FILENAME_DUPETABLE);
+  LittleFS.rename(FILENAME_DUPETABLE_NEW, FILENAME_DUPETABLE);
 
   /* Also persist the SPW */
   rdcp_spw_persist();

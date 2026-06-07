@@ -786,7 +786,7 @@ void rdcp_check_heartbeat(void)
             {
                 if (neighbors[i].timestamp > now - CFG.heartbeat_interval)
                 {
-                    if (num_mgs <= 91) // max. number of entries according to specs
+                    if (num_mgs < 91) // max. number of entries according to specs
                     {
                         rdcp_response.payload.data[2 + (2*num_mgs + 0)] = neighbors[i].sender % 256;
                         rdcp_response.payload.data[2 + (2*num_mgs + 1)] = neighbors[i].sender / 256;
@@ -796,10 +796,9 @@ void rdcp_check_heartbeat(void)
             }
         }
 
-        if (num_mgs > 91) num_mgs = 91;
-
         rdcp_response.payload.data[0] = num_mgs % 256;
         rdcp_response.payload.data[1] = num_mgs / 256;
+        if (num_mgs > 91) num_mgs = 91; // maximum included with details in payload
         rdcp_response.header.rdcp_payload_length = 2 + 2 * num_mgs;
 
         rdcp_prepare_response_header(false);

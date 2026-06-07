@@ -49,11 +49,15 @@ void rdcp_handle_incoming_lora_message(void)
         // NB: Received non-RDCP LoRa packets have no influence on CFEst, so there is nothing else to do.
         return;
     }
+    if (current_lora_message.payload_length > RDCP_MAX_LORA_PAYLOAD_SIZE)
+    {
+        serial_writeln("INFO: LoRa packet too large - not an RDCP message, not processing");
+        return;
+    }
 
     /* Copy the message to process into the rdcp_msg_in data structure */
     memset(&rdcp_msg_in.payload.data, 0, RDCP_MAX_INNER_PAYLOAD_SIZE);
     memcpy(&rdcp_msg_in.header, &current_lora_message.payload, RDCP_HEADER_SIZE);
-    if (current_lora_message.payload_length > RDCP_MAX_INNER_PAYLOAD_SIZE) current_lora_message.payload_length = RDCP_MAX_INNER_PAYLOAD_SIZE;
     for (int i=RDCP_HEADER_SIZE; i<current_lora_message.payload_length; i++) rdcp_msg_in.payload.data[i-RDCP_HEADER_SIZE] = current_lora_message.payload[i];
     
     /* Verify the CRC-16 checksum */

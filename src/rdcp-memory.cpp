@@ -14,6 +14,7 @@ runtime_da_data DART;
 extern int64_t reboot_requested;
 
 #define FILENAME_MEMORIES "/memory.da"
+#define FILENAME_MEMORIES_NEW "/memory.dan"
 
 void rdcp_memory_remember(void)
 {
@@ -144,12 +145,14 @@ void rdcp_memory_persist(void)
     FFat.remove(FILENAME_MEMORIES);
     File f = FFat.open(FILENAME_MEMORIES, FILE_WRITE);
 #else
-    LittleFS.remove(FILENAME_MEMORIES);
-    File f = LittleFS.open(FILENAME_MEMORIES, FILE_WRITE);
+    if (LittleFS.exists(FILENAME_MEMORIES_NEW)) LittleFS.remove(FILENAME_MEMORIES_NEW);
+    File f = LittleFS.open(FILENAME_MEMORIES_NEW, FILE_WRITE);
 #endif
     if (!f) return;
     f.write((uint8_t *) &mem, sizeof(mem));
     f.close();
+    if (LittleFS.exists(FILENAME_MEMORIES)) LittleFS.remove(FILENAME_MEMORIES);
+    LittleFS.rename(FILENAME_MEMORIES_NEW, FILENAME_MEMORIES);
     return;
 }
 
@@ -164,6 +167,11 @@ void rdcp_memory_restore(void)
     if (!f) return;
     f.read((uint8_t *) &mem, sizeof(mem));
     f.close();
+    if (mem.idx_first < -1 || mem.idx_first >= MAX_STORED_MSGS)
+    {
+        serial_writeln("WARNING: Invalid idx_first in memories file - resetting memories");
+        rdcp_memory_forget();
+    }
     rdcp_memory_dump();
     return;
 }
