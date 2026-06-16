@@ -127,9 +127,8 @@ void rdcp_spw_set_entry(uint16_t origin, uint16_t seqnr)
   bool found = false;
   for (int i=0; i != SLIDING_PRUNE_WINDOW_NUMBER_OF_ENTRIES; i++)
   {
-    if (spw.windowentries[i].origin == origin)
+    if ((spw.windowentries[i].origin == origin) && (spw.windowentries[i].sequence_number == seqnr))
     {
-      spw.windowentries[i].sequence_number = seqnr;
       found = true;
     }
   }
