@@ -153,6 +153,7 @@ void rdcp_handle_incoming_lora_message(void)
                 { // Proper forwarding of HQ messages appears to work fine, so we completely ignore the received messages 
                   // by returning from this function, without registering the message for dupe table/SPW and further processing it.
                     serial_writeln("INFO: Skipping shadow propagation for HQ message, expecting proper propagation following");
+                    print_rdcp_csv(); // preserve telemetry data
                     return;
                 }
             }
