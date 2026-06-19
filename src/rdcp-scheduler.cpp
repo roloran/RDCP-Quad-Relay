@@ -265,6 +265,8 @@ void rdcp_txqueue_compress(void)
     { /* Channel is unused for some time; check whether we have something to send earlier. */
       bool has_forced_entry = false;
       int earliest = RDCP_INDEX_NONE;
+      int64_t latest_scheduled_time = now;
+
       for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
       {
         if (txq[channel].entries[i].waiting)
@@ -279,10 +281,15 @@ void rdcp_txqueue_compress(void)
           {
             earliest = i;
           }
+          if (latest_scheduled_time < txq[channel].entries[i].currently_scheduled_time)
+          {
+            latest_scheduled_time = txq[channel].entries[i].currently_scheduled_time; // remember entry furthest away from now
+          }
         }
       }
       if (has_forced_entry) continue; // Skip compression to avoid clash with hard-scheduled messages
       if (earliest == RDCP_INDEX_NONE) continue;   // No entry found to send earlier
+      if (latest_scheduled_time - now < 2 * MINUTES_TO_MILLISECONDS) continue; // compress only if we have at least one entry scheduled for more than 2 minutes in the future
 
       int64_t delta = txq[channel].entries[earliest].currently_scheduled_time - now;
       if (delta > 3 * SECONDS_TO_MILLISECONDS * CFG.sf_multiplier)
