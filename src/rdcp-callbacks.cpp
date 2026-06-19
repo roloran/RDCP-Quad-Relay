@@ -353,6 +353,8 @@ void rdcp_periodic_kickstart(void)
         (!CC[TX_CALLBACK_PERIODIC868].in_use) && 
         (now > last_periodic_chain_finish + CFG.periodic_interval) &&
         (now > rdcp_get_channel_free_estimation(CHANNEL868DA)) && 
+        (now > rdcp_get_channel_free_estimation(CHANNEL433)) && // start periodics only when both channels are free
+        (get_num_txq_entries(CHANNEL433) < 2) &&
         (get_num_txq_entries(CHANNEL868DA) < 2))
     {
         int first = mem.idx_first;
@@ -365,6 +367,7 @@ void rdcp_periodic_kickstart(void)
             if ((neighbors[i].sender >= RDCP_ADDRESS_MG_LOWERBOUND) && 
                 (neighbors[i].heartbeat) && 
                 (neighbors[i].timestamp > now - 60 * MINUTES_TO_MILLISECONDS) &&
+                (neighbors[i].timestamp > last_periodic_chain_finish) &&
                 (neighbors[i].roamingrec == CFG.rdcp_address) &&
                 (neighbors[i].explicit_refnr)) 
                 {
