@@ -15,6 +15,7 @@
 #include "lorawan-tunnel.h"
 #include "rdcp-roaming-support.h"
 #include "rdcp-dupetable.h"
+#include "rdcp-callbacks.h"
 
 lora_message current_lora_message;
 extern rdcp_message rdcp_msg_in;
@@ -28,6 +29,8 @@ bool currently_in_fetch_mode = false;
 char serial_info[INFOLEN];
 extern int64_t last_heartbeat_sent;
 int64_t timestamp_last_hqdev_seen_via_ep = RDCP_TIMESTAMP_ZERO;
+
+extern callback_chain CC[NUM_TX_CALLBACKS];
 
 void rdcp_handle_incoming_lora_message(void)
 {
@@ -225,6 +228,17 @@ void rdcp_handle_incoming_lora_message(void)
 
     /* Check the RDCP Message duplicate status */
     bool duplicate = rdcp_check_duplicate_message(rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number);
+
+    /* If we are currently sending periodics, stop doing so if we hear a CIRE or ACK going on. */
+    if (CC[TX_CALLBACK_PERIODIC868].in_use)
+    {
+        if ((rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT) ||
+            (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK))
+            {
+                serial_writeln("INFO: Interrupting periodics chain due to ongoing CIRE/ACK");
+                rdcp_chain_callback(TX_CALLBACK_PERIODIC868, true);
+            }
+    }
 
     /* On the 433 MHz channel, we may be a designated relay even if it is a duplicate */
     if (current_lora_message.channel == CHANNEL433)
