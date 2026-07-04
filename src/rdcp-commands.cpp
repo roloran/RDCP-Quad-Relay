@@ -165,6 +165,42 @@ void rdcp_cmd_send_echo_response(void)
     return;
 }
 
+void rdcp_send_test_message(char *content, uint16_t destination)
+{
+    size_t len = strlen(content);
+
+    if (len > RDCP_MAX_INNER_PAYLOAD_SIZE)
+    {
+        serial_writeln("ERROR: RDCP Test message content exceeds maximum size");
+        return;
+    }
+
+    rdcp_response.header.destination = destination;
+    rdcp_response.header.message_type = RDCP_MSGTYPE_TEST;
+    rdcp_response.header.rdcp_payload_length = len;
+
+    for (size_t i=COUNT_ZERO; i<len; i++)
+    {
+        rdcp_response.payload.data[i] = content[i];
+    }
+
+    /* Send with fresh sequence number on CHANNEL433 */
+    rdcp_response.header.relay1 = (CFG.cirerelays[0] << 4) + 0;
+    rdcp_response.header.relay2 = (CFG.cirerelays[1] << 4) + 1;
+    rdcp_response.header.relay3 = (CFG.cirerelays[2] << 4) + 2;
+    rdcp_prepare_response_header(false);
+    rdcp_pass_response_to_scheduler(CHANNEL433);
+
+    /* Also send on CHANNEL868DA, re-use sequence number */
+    rdcp_response.header.relay1 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    rdcp_prepare_response_header(true);
+    rdcp_pass_response_to_scheduler(CHANNEL868DA);
+
+    return;
+}
+
 /**
  * Send a DA Status Reponse after receiving a DA Status Request.
  */
