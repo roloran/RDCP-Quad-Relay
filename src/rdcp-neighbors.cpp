@@ -55,6 +55,7 @@ void rdcp_neighbor_register_rx(uint8_t channel, uint16_t sender, double rssi, do
     neighbors[index].snr       = snr;
     neighbors[index].timestamp = timestamp;
     neighbors[index].heartbeat = heartbeat;
+    if (heartbeat) neighbors[index].hb_timestamp = timestamp;
     neighbors[index].counted   = false;
     neighbors[index].explicit_refnr   = explicit_refnr;
     neighbors[index].latest_refnr     = latest_refnr;
