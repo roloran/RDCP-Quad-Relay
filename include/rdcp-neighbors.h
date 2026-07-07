@@ -28,6 +28,7 @@ struct neighbor_table_entry {
     double rssi           = 0.0;
     double snr            = 0.0;
     int64_t timestamp     = RDCP_TIMESTAMP_ZERO;
+    int64_t hb_timestamp  = RDCP_TIMESTAMP_ZERO;
     bool heartbeat        = false;      // has sent an explitit Heartbeat  
     bool counted          = false;      // has been counted for DA Status Response
     bool explicit_refnr   = false;    // has sent an explicit latest OA RefNr

@@ -885,6 +885,15 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     serial_writeln(b);
     rdcp_send_cire(subtype, refnum, b3);
   }
+  else if (s_uppercase.startsWith("RDCPTEST "))
+  { // RDCPTEST Raspberry Pi of DA 0x0200 has rebooted
+    // 0123456789
+    String p1 = s.substring(9);
+    char b1[256];
+    p1.toCharArray(b1, 256);
+    serial_writeln("INFO: Sending RDCP TEST message to HQ");
+    rdcp_send_test_message(b1);
+  }
   else if (s_uppercase.startsWith("RDCPFETCH "))
   {
     // RDCPFETCH 12EF

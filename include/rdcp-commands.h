@@ -2,6 +2,7 @@
 #define _RDCP_COMMANDS 
 
 #include <Arduino.h>
+#include "rdcp-common.h"
 
 /**
  * Handle the command contained in the most recent received RDCP Message.
@@ -27,6 +28,11 @@ void rdcp_check_fetch_timeout(void);
  * Send an RDCP Citizen Report to the HQ. 
  */
 void rdcp_send_cire(uint8_t subtype, uint16_t refnr, char *content);
+
+/**
+ * Send an RDCP Test Message, by default to HQ.
+ */
+void rdcp_send_test_message(char *content, uint16_t destination=RDCP_HQ_MULTICAST_ADDRESS);
 
 /**
  * Fetch a single message from designated neighbor. 
