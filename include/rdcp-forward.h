@@ -22,8 +22,9 @@ bool rdcp_check_forward_da_relevance(void);
 /**
  * Schedule a received RDCP Message for forwarding on the 868 MHz channel. 
  * @param add_random_delay 0 to send ASAP, 1 for short delay, 2 for proportional delay
+ * @param flag_as_ep_echo Set to true if we are echoing back a fresh message received as designated Entry Point to our local area
  */
-void rdcp_forward_schedule(int add_random_delay);
+void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo=false);
 
 /**
  * Send the RDCP Message expliticly to the DA via Serial/UART. 

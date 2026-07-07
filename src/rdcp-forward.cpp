@@ -58,7 +58,7 @@ bool rdcp_check_forward_da_relevance(void)
     return false;
 }
 
-void rdcp_forward_schedule(int add_random_delay)
+void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
 {
     /* Do not forward messages we have sent ourselves before */
     if (rdcp_msg_in.header.origin == CFG.rdcp_address)
@@ -78,6 +78,7 @@ void rdcp_forward_schedule(int add_random_delay)
     r.header.relay1 = RDCP_HEADER_RELAY_MAGIC_NONE;
     r.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
     r.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    if (flag_as_ep_echo) r.header.relay3 = RDCP_HEADER_RELAY_MAGIC_EP_ECHO;
 
     /* Update CRC header field */
     uint8_t data_for_crc[INFOLEN];

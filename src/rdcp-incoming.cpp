@@ -287,7 +287,7 @@ void rdcp_handle_incoming_lora_message(void)
         {
             if (rdcp_check_forward_868_relevance()) 
             {   
-                rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL);
+                rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL, DONT_FLAG_AS_EP_ECHO);
             }
             else 
             {
@@ -326,7 +326,7 @@ void rdcp_handle_incoming_lora_message(void)
                         if ((rdcp_msg_in.header.sender < RDCP_ADDRESS_BBKDA_LOWERBOUND) &&
                             (rdcp_msg_in.header.message_type != RDCP_MSGTYPE_HEARTBEAT)) // don't echo back heartbeats
                         {
-                                rdcp_forward_schedule(FORWARD_DELAY_SHORT);
+                                rdcp_forward_schedule(FORWARD_DELAY_SHORT, DO_FLAG_AS_EP_ECHO);
                         }
                         /*
                             The same applies to messages sent by other MGs so they reach the HQ on 868 MHz
@@ -336,7 +336,7 @@ void rdcp_handle_incoming_lora_message(void)
                             (rdcp_msg_in.header.message_type != RDCP_MSGTYPE_HEARTBEAT)) // don't echo back heartbeats
                         {
                             if (rdcp_check_forward_868_relevance()) 
-                                rdcp_forward_schedule(FORWARD_DELAY_SHORT);
+                                rdcp_forward_schedule(FORWARD_DELAY_SHORT, DO_FLAG_AS_EP_ECHO);
                         }
                     }
 
@@ -369,13 +369,13 @@ void rdcp_handle_incoming_lora_message(void)
                         rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
                         rdcp_txqueue_reschedule(CHANNEL868DA, 0);
                     }
-                    rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL); // add a delay
+                    rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL, DONT_FLAG_AS_EP_ECHO); // add a delay
                 }
                 else if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_HEARTBEAT)
                 { // Forward Heartbeats only if their origin is another DA, not an MG
                     if ((rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND) &&
                         (rdcp_msg_in.header.origin < RDCP_ADDRESS_MG_LOWERBOUND)) 
-                        rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL); // add a delay
+                        rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL, DONT_FLAG_AS_EP_ECHO); // add a delay
                 }
                 if (rdcp_check_forward_da_relevance()) rdcp_msg_to_da_via_serial();
 
