@@ -89,7 +89,64 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
     future_timeslots = 0;
   }
 
-  uint32_t channel_free_after = remaining_current_sender_time + future_timeslots * timeslot_duration;
+  uint32_t magic_delay = RDCP_DURATION_ZERO;
+
+  /* Handle 868.downlink channel separately */
+  if (current_lora_message.channel == CHANNEL868DA)
+  {
+    /* 
+      The basic assumption for 868 MHz channels with RDCP v0.4 according to specs is that the channel will 
+      be free after the current timeslot (zero future timeslots).
+      However, this implementation change to CFEst in DAs attempts to keep the 868 MHz
+      channel free until the shadow propagation cycle has finished.
+      We attempt to derive the CFEst value depending on whether a DA is currently sending,
+      or whether it is a MG sending anything but a heartbeat.
+    */
+    if ((rdcp_msg_in.header.sender < RDCP_ADDRESS_MG_LOWERBOUND) && 
+        (rdcp_msg_in.header.sender >= RDCP_ADDRESS_BBKDA_LOWERBOUND))
+    { // DA or BBK sending
+      uint8_t relay_currently_sending = rdcp_msg_in.header.sender & 0x0F;
+      int future_relays = CFG.scenario_num_relays - relay_currently_sending - THIS_ONE;
+      future_timeslots = future_relays > ZERO_TIMESLOTS ? future_relays : ZERO_TIMESLOTS;
+      
+      /* 
+        A magic value in the relay3 header field indicates that a message's Entry Point
+        echoes back a new message in its local area. In this case, a full 868.forward
+        cycle will still follow afterwards.
+      */    
+      if ((rdcp_msg_in.header.relay1 == RDCP_HEADER_RELAY_MAGIC_NONE) &&
+          (rdcp_msg_in.header.relay3 == RDCP_HEADER_RELAY_MAGIC_EP_ECHO))
+      {
+        future_timeslots = CFG.scenario_num_relays;
+        magic_delay = RDCP_EP_HEADSTART_DELAY;
+      }
+
+      /* Selected message types stay local to DAs and must be ignored when sent by a DA origin */
+      if ((rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK) || 
+          (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ROAMINGBEACON))
+      {
+        if ((rdcp_msg_in.header.origin < RDCP_ADDRESS_MG_LOWERBOUND) &&
+            (rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND))
+        {
+          future_timeslots = 0;
+        }
+      }
+    }
+    else 
+    { // HQ or MG device sending
+      if (rdcp_msg_in.header.sequence_number > RDCP_SEQUENCENR_SPECIAL_ZERO)
+      { // not an MG heartbeat
+        if (rdcp_msg_in.header.relay1 != RDCP_HEADER_RELAY1_NO_EP)
+        {
+          // only apply if EP is set
+          future_timeslots = CFG.scenario_num_relays;
+          magic_delay = RDCP_EP_HEADSTART_DELAY;
+        }
+      }
+    }
+  }
+
+  uint32_t channel_free_after = remaining_current_sender_time + future_timeslots * timeslot_duration + magic_delay;
   int64_t channel_free_at = my_millis() + channel_free_after;
   most_recent_future_timeslots = future_timeslots;
 
@@ -225,7 +282,40 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
     future_timeslots = 0;
   }
 
-  uint32_t channel_free_after = remaining_current_sender_time + future_timeslots * timeslot_duration;
+  uint32_t magic_delay = RDCP_DURATION_ZERO;
+
+  /* Handle 868.downlink channel separately */
+  if (channel == CHANNEL868DA)
+  { // we are certain to be sending ourselves here
+    uint8_t relay_currently_sending = CFG.relay_identifier;
+    int future_relays = CFG.scenario_num_relays - relay_currently_sending - THIS_ONE;
+    future_timeslots = future_relays > ZERO_TIMESLOTS ? future_relays : ZERO_TIMESLOTS;
+      
+    /* 
+      A magic value in the relay3 header field indicates that a message's Entry Point
+      echoes back a new message in its local area. In this case, a full 868.forward
+      cycle will still follow afterwards.
+    */    
+    if ((relay1 == RDCP_HEADER_RELAY_MAGIC_NONE) &&
+        (relay3 == RDCP_HEADER_RELAY_MAGIC_EP_ECHO))
+    {
+      future_timeslots = CFG.scenario_num_relays;
+      magic_delay = RDCP_EP_HEADSTART_DELAY;
+    }
+
+    /* Selected message types stay local to DAs and must be ignored when sent by a DA origin */
+    if ((mt == RDCP_MSGTYPE_ACK) || 
+        (mt == RDCP_MSGTYPE_ROAMINGBEACON))
+    {
+      if ((origin < RDCP_ADDRESS_MG_LOWERBOUND) &&
+          (origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND))
+      {
+        future_timeslots = 0;
+      }
+    }
+  }
+
+  uint32_t channel_free_after = remaining_current_sender_time + future_timeslots * timeslot_duration + magic_delay;
   int64_t channel_free_at = my_millis() + channel_free_after;
 
   contributed_propagation_cycle_end = channel_free_at;

@@ -30,6 +30,7 @@
 #define RDCP_HEADER_RELAY_MAGIC_EP   0xEE
 #define RDCP_HEADER_RELAY_MAGIC_NONE 0xEE
 #define RDCP_HEADER_RELAY_MAGIC_EP_ECHO 0xDE
+#define RDCP_HEADER_RELAY1_NO_EP     0xE0
 
 #define DO_FLAG_AS_EP_ECHO true
 #define DONT_FLAG_AS_EP_ECHO false
@@ -68,6 +69,8 @@
 #define RDCP_DURATION_ZERO  0
 #define RDCP_INDEX_NONE    -1
 #define RDCP_INDEX_FIRST    0
+#define THIS_ONE            1
+#define ZERO_TIMESLOTS      0
 
 /// RDCP v0.4 fixed maximum LoRa Payload size
 #define RDCP_MAX_LORA_PAYLOAD_SIZE 200
@@ -362,6 +365,8 @@ struct tracked_propagation_cycle {
 #define TIME_ZERO   0
 #define ONLY_ONE    1
 #define FIRST       1
+
+#define RDCP_EP_HEADSTART_DELAY 7500
 
 #endif 
 /* EOF */

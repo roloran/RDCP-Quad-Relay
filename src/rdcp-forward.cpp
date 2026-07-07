@@ -128,12 +128,25 @@ void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
         }
         
         char info[INFOLEN];
-        snprintf(info, INFOLEN, "INFO: Preparing 868 forward of %04X-%04X heard from %04X", 
-            rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number, rdcp_msg_in.header.sender);
-        serial_writeln(info);
 
-        rdcp_txqueue_add(CHANNEL868DA, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
-          important, NOFORCEDTX, TX_CALLBACK_FORWARD, forced_time);
+        if ((add_random_delay == FORWARD_DELAY_SHORT) || flag_as_ep_echo)
+        {
+            snprintf(info, INFOLEN, "INFO: Preparing 868 forward on channel free of %04X-%04X heard from %04X with ft %" PRId64, 
+                rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number, rdcp_msg_in.header.sender, forced_time);
+            serial_writeln(info);
+
+            rdcp_txqueue_add(CHANNEL868DA, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
+            important, NOFORCEDTX, TX_CALLBACK_FORWARD, forced_time);
+        }
+        else
+        {
+            snprintf(info, INFOLEN, "INFO: Preparing 868 forward within cycle of %04X-%04X heard from %04X with ft %" PRId64, 
+                rdcp_msg_in.header.origin, rdcp_msg_in.header.sequence_number, rdcp_msg_in.header.sender, forced_time);
+            serial_writeln(info);
+
+            rdcp_txqueue_add(CHANNEL868DA, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
+            important, FORCEDTX, TX_CALLBACK_FORWARD, my_millis()-forced_time); // absolute time = now - (negative relative time)
+        }
     }
 
     return;
