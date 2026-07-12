@@ -77,7 +77,7 @@ void rdcp_send_memory(int memidx, uint8_t callback, uint8_t channel)
     r.header.counter = CFG.memory_retransmissions;
     r.header.relay1 = RDCP_HEADER_RELAY_MAGIC_NONE;
     r.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
-    r.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    r.header.relay3 = RDCP_HEADER_RELAY_MAGIC_PERIODICS;
 
     /* Update CRC header field */
     uint8_t data_for_crc[INFOLEN];

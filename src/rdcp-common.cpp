@@ -54,6 +54,30 @@ uint8_t rdcp_get_default_retransmission_counter_for_messagetype(uint8_t mt)
   return nrt;
 }
 
+#define CFEST_PREVIOUS_CONSIDERATIONS 10
+uint16_t cfest_prevcons_origin[CFEST_PREVIOUS_CONSIDERATIONS] = { 0x0000 };
+uint16_t cfest_prevcons_seqnr[CFEST_PREVIOUS_CONSIDERATIONS]  = { 0x0000 };
+int cfest_prevcons_next_position = 0;
+
+/**
+ * Check whether we already considered a recent RDCP Message identified by Origin and SeqNr for CFEst calculation
+ */
+bool rdcp_checkset_cfest_previous_consideration(uint16_t origin, uint16_t seqnr)
+{
+  for (int i=0; i<CFEST_PREVIOUS_CONSIDERATIONS; i++)
+  {
+    if ((cfest_prevcons_origin[i] == origin) && 
+        (cfest_prevcons_seqnr[i]  == seqnr))
+    { // already considered this RDCP Message
+      return true;
+    }
+  }
+  cfest_prevcons_origin[cfest_prevcons_next_position] = origin;
+  cfest_prevcons_seqnr[cfest_prevcons_next_position]  = seqnr;
+  cfest_prevcons_next_position = (cfest_prevcons_next_position + 1) % CFEST_PREVIOUS_CONSIDERATIONS;
+  return false;
+}
+
 void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
 {
   uint16_t airtime = airtime_in_ms(current_lora_message.channel, RDCP_HEADER_SIZE + rdcp_msg_in.header.rdcp_payload_length);
@@ -105,6 +129,7 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
     if ((rdcp_msg_in.header.sender < RDCP_ADDRESS_MG_LOWERBOUND) && 
         (rdcp_msg_in.header.sender >= RDCP_ADDRESS_BBKDA_LOWERBOUND))
     { // DA or BBK sending
+      bool previously_considered = rdcp_checkset_cfest_previous_consideration(origin, seqnr);
       uint8_t relay_currently_sending = rdcp_msg_in.header.sender & 0x0F;
       int future_relays = CFG.scenario_num_relays - relay_currently_sending - THIS_ONE;
       future_timeslots = future_relays > ZERO_TIMESLOTS ? future_relays : ZERO_TIMESLOTS;
@@ -117,8 +142,15 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
       if ((rdcp_msg_in.header.relay1 == RDCP_HEADER_RELAY_MAGIC_NONE) &&
           (rdcp_msg_in.header.relay3 == RDCP_HEADER_RELAY_MAGIC_EP_ECHO))
       {
-        future_timeslots = CFG.scenario_num_relays;
-        magic_delay = RDCP_EP_HEADSTART_DELAY;
+        if (!previously_considered)
+        { // skip if we had seen the same message by another DA on 868.downlink previously
+          future_timeslots = CFG.scenario_num_relays;
+          magic_delay = RDCP_EP_HEADSTART_DELAY;
+        }
+        else 
+        { // if EP ECHO does not come first, ignore it
+          future_timeslots = 0;
+        }
       }
 
       /* Selected message types stay local to DAs and must be ignored when sent by a DA origin */
@@ -127,6 +159,15 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
       {
         if ((rdcp_msg_in.header.origin < RDCP_ADDRESS_MG_LOWERBOUND) &&
             (rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND))
+        {
+          future_timeslots = 0;
+        }
+      }
+
+      /* Ignore Periodics */
+      if (rdcp_msg_in.header.relay3 == RDCP_HEADER_RELAY_MAGIC_PERIODICS)
+      {
+        if (rdcp_msg_in.header.origin < RDCP_ADDRESS_HQ_UPPERBOUND)
         {
           future_timeslots = 0;
         }
@@ -287,6 +328,7 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
   /* Handle 868.downlink channel separately */
   if (channel == CHANNEL868DA)
   { // we are certain to be sending ourselves here
+    bool previously_considered = rdcp_checkset_cfest_previous_consideration(origin, seqnr);
     uint8_t relay_currently_sending = CFG.relay_identifier;
     int future_relays = CFG.scenario_num_relays - relay_currently_sending - THIS_ONE;
     future_timeslots = future_relays > ZERO_TIMESLOTS ? future_relays : ZERO_TIMESLOTS;
@@ -299,8 +341,15 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
     if ((relay1 == RDCP_HEADER_RELAY_MAGIC_NONE) &&
         (relay3 == RDCP_HEADER_RELAY_MAGIC_EP_ECHO))
     {
-      future_timeslots = CFG.scenario_num_relays;
-      magic_delay = RDCP_EP_HEADSTART_DELAY;
+      if (!previously_considered)
+      {
+        future_timeslots = CFG.scenario_num_relays;
+        magic_delay = RDCP_EP_HEADSTART_DELAY;
+      }
+      else 
+      {
+        future_timeslots = 0;
+      }
     }
 
     /* Selected message types stay local to DAs and must be ignored when sent by a DA origin */
@@ -309,6 +358,15 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
     {
       if ((origin < RDCP_ADDRESS_MG_LOWERBOUND) &&
           (origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND))
+      {
+        future_timeslots = 0;
+      }
+    }
+
+    /* Ignore Periodics */
+    if (relay3 == RDCP_HEADER_RELAY_MAGIC_PERIODICS)
+    {
+      if (origin < RDCP_ADDRESS_HQ_UPPERBOUND)
       {
         future_timeslots = 0;
       }
