@@ -157,7 +157,7 @@ void rdcp_cmd_send_echo_response(void)
     {
         rdcp_response.header.relay1 = RDCP_HEADER_RELAY_MAGIC_NONE;
         rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
-        rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
+        rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_EP_ECHO;
         rdcp_prepare_response_header(false);
         rdcp_pass_response_to_scheduler(CHANNEL868DA);
     }
@@ -194,7 +194,7 @@ void rdcp_send_test_message(char *content, uint16_t destination)
     /* Also send on CHANNEL868DA, re-use sequence number */
     rdcp_response.header.relay1 = RDCP_HEADER_RELAY_MAGIC_NONE;
     rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
-    rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_EP_ECHO;
     rdcp_prepare_response_header(true);
     rdcp_pass_response_to_scheduler(CHANNEL868DA);
 
@@ -287,7 +287,7 @@ void rdcp_cmd_send_da_status_response(bool unsolicited = false)
     /* As the HQ might be next to us, we also have to send this on 868 MHz. */
     rdcp_response.header.relay1 = RDCP_HEADER_RELAY_MAGIC_NONE;
     rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
-    rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_EP_ECHO;
     rdcp_prepare_response_header(true);
     rdcp_pass_response_to_scheduler(CHANNEL868DA);
 
@@ -846,7 +846,7 @@ void rdcp_check_heartbeat(void)
         /* As the HQ might be next to us, we also have to send this on 868 MHz. */
         rdcp_response.header.relay1 = RDCP_HEADER_RELAY_MAGIC_NONE;
         rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
-        rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
+        rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_EP_ECHO;
         rdcp_prepare_response_header(true); // re-use sequence number from 433 MHz channel message
         rdcp_pass_response_to_scheduler(CHANNEL868DA, true);
     }
@@ -1051,7 +1051,7 @@ void rdcp_send_cire(uint8_t subtype, uint16_t refnr, char *content)
     /* Second, 868 MHz channel. Header fields need to be adjusted. */
     rdcp_response.header.relay1 = RDCP_HEADER_RELAY_MAGIC_NONE;
     rdcp_response.header.relay2 = RDCP_HEADER_RELAY_MAGIC_NONE;
-    rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_NONE;
+    rdcp_response.header.relay3 = RDCP_HEADER_RELAY_MAGIC_EP_ECHO;
 
     /* Update CRC header field */
     memcpy(&data_for_crc, &rdcp_response.header, RDCP_HEADER_SIZE - RDCP_CRC_SIZE);
