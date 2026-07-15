@@ -152,6 +152,17 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
           future_timeslots = 0;
         }
       }
+      else 
+      {
+        /* 
+          Not seeing this message from the EP right now; if we never considered this
+          message before, we have to assume that the EP Echo might come last.
+        */
+        if (!previously_considered)
+        {
+          future_timeslots += 1;
+        }
+      }
 
       /* Selected message types stay local to DAs and must be ignored when sent by a DA origin */
       if ((rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK) || 
