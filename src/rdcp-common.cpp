@@ -172,6 +172,7 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
             (rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND))
         {
           future_timeslots = 0;
+          magic_delay = RDCP_DURATION_ZERO;
         }
       }
 
@@ -181,6 +182,7 @@ void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
         if (rdcp_msg_in.header.origin < RDCP_ADDRESS_HQ_UPPERBOUND)
         {
           future_timeslots = 0;
+          magic_delay = RDCP_DURATION_ZERO;
         }
       }
     }
@@ -371,6 +373,7 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
           (origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND))
       {
         future_timeslots = 0;
+        magic_delay = RDCP_DURATION_ZERO;
       }
     }
 
@@ -380,6 +383,7 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
       if (origin < RDCP_ADDRESS_HQ_UPPERBOUND)
       {
         future_timeslots = 0;
+        magic_delay = RDCP_DURATION_ZERO;
       }
     }
   }

@@ -116,8 +116,9 @@ void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
         if (add_random_delay == FORWARD_DELAY_SHORT)
         { // used as EP
           // delay long enough to have a good chance to start distributing on 433 MHz channel first
-          // forced_time = 0 - my_random_in_range(2000, 5000); // 2 to 5 seconds
           forced_time = -4000; // fixed value for 433 MHz channel headstart
+          // If we forward a CIRE, we need to compensate for the DA-local unsigned ACK already queued
+          if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT) forced_time += 3500;
         }
         else if (add_random_delay == FORWARD_DELAY_PROPORTIONAL)
         { // used as non-EP
