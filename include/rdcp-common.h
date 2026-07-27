@@ -80,6 +80,7 @@
 /// Magic values for TX scheduling; > 0 means delay in milliseconds
 #define TX_IMMEDIATELY -1
 #define TX_WHEN_CF 0
+#define TX_RESCHEDULE_TO_CF 0
 
 /// Buffer time within a timeslot between retransmissions according to specs
 #define RDCP_TIMESLOT_BUFFERTIME 1000
@@ -366,6 +367,7 @@ struct tracked_propagation_cycle {
 #define TIME_ZERO   0
 #define ONLY_ONE    1
 #define FIRST       1
+#define LENGTH_ZERO 0
 
 #define RDCP_EP_HEADSTART_DELAY 7500
 

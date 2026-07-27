@@ -168,7 +168,7 @@ bool rdcp_txqueue_reschedule(uint8_t channel, int64_t offset)
     if (delta < 0) delta = 0; // do not schedule back in time
     bool dropped = false;
 
-    if (offset != 0) delta = offset;
+    if (offset != TX_RESCHEDULE_TO_CF) delta = offset;
     /*
         We might return false here if delta == 0 as it would not
         actually re-schedule anything.
@@ -180,7 +180,7 @@ bool rdcp_txqueue_reschedule(uint8_t channel, int64_t offset)
     /* Look for the 'currently scheduled' timestamp of the earliest
        TXQ entry to be sent before channel becomes free */
     int64_t next_timestamp = cfest;
-    for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
+    for (int i=COUNT_ZERO; i < MAX_TXQUEUE_ENTRIES; i++)
     {
         if (!txq[channel].entries[i].waiting)      continue; // only waiting entries are relevant
         if (txq[channel].entries[i].in_process)    continue; // skip if currently in process
@@ -190,7 +190,7 @@ bool rdcp_txqueue_reschedule(uint8_t channel, int64_t offset)
     }
     int64_t maximum_diff_to_cfest = cfest - next_timestamp;
 
-    for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
+    for (int i=COUNT_ZERO; i < MAX_TXQUEUE_ENTRIES; i++)
     {
       if (txq[channel].entries[i].waiting)
       {
@@ -241,7 +241,7 @@ bool rdcp_txqueue_reschedule(uint8_t channel, int64_t offset)
             txq[channel].entries[i].currently_scheduled_time - txq[channel].entries[i].originally_scheduled_time);
           serial_writeln(info);
           txq[channel].entries[i].waiting = false; // drop message due to excessive delay when trying to send
-          txq[channel].entries[i].payload_length = 0;
+          txq[channel].entries[i].payload_length = LENGTH_ZERO;
           txq[channel].entries[i].in_process = false;
           txq[channel].entries[i].ordering_number = COUNT_ZERO;
           txq[channel].num_entries--;

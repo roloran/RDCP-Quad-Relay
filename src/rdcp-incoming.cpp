@@ -70,7 +70,7 @@ void rdcp_handle_incoming_lora_message(void)
         // NB: Any RDCP Header or RDCP Payload field may have been corrupted,
         //     so we do not process anything further, including updates to CFEst.
         bad_crc_counter++;
-        if (bad_crc_counter % BAD_CRC_COUNTER_THRESHOLD == 0)
+        if (bad_crc_counter % BAD_CRC_COUNTER_THRESHOLD == COUNT_ZERO)
         {
             /* 
                 Bad CRC usually is the result of poor reception or other devices sending 
@@ -105,7 +105,16 @@ void rdcp_handle_incoming_lora_message(void)
         {
             if ((rdcp_msg_in.header.origin >= RDCP_ADDRESS_BBKDA_LOWERBOUND) && (rdcp_msg_in.header.origin < RDCP_ADDRESS_MG_LOWERBOUND))
             {
-                if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK) print_rdcp_csv(); // preserve telemetry data for DA ACKs
+                if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK)
+                { /* Another DA sends an ACK to a CIRE for which it is the EP */
+                    print_rdcp_csv(); // preserve telemetry data for DA ACKs
+                    /* Keep the downlink channel free a bit so the EP can locally echo-forward the CIRE first */
+                    int64_t cfest_max = rdcp_get_channel_free_estimation(CHANNEL868DA); 
+                    now = my_millis(); // refresh timestamp
+                    if (now > cfest_max) cfest_max = now;
+                    rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + RDCP_EP_HEADSTART_DELAY);
+                    rdcp_txqueue_reschedule(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
+                }
                 return;
             }
         }
@@ -381,7 +390,7 @@ void rdcp_handle_incoming_lora_message(void)
                         now = my_millis(); // refresh timestamp
                         if (now > cfest_max) cfest_max = now;
                         rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
-                        rdcp_txqueue_reschedule(CHANNEL868DA, 0);
+                        rdcp_txqueue_reschedule(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
                     }
                     rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL, DONT_FLAG_AS_EP_ECHO); // add a delay
                 }
