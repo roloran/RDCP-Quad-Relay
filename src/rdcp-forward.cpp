@@ -122,8 +122,10 @@ void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
         }
         else if (add_random_delay == FORWARD_DELAY_PROPORTIONAL)
         { // used as non-EP
-          // start with upper bound of random EP delay
-          forced_time -= 5000; 
+          // start with upper bound value
+          forced_time -= 7500; 
+          // Consider EP's ACK time on forwarding CIREs
+          if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT) forced_time -= 3500;
           // add time proportional to timeslot duration (message length, retransmissions) and own relay id 
           forced_time -= (1 + CFG.relay_identifier) * rdcp_get_timeslot_duration(CHANNEL868DA, data_for_scheduler);
         }
