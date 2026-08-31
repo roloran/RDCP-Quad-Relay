@@ -221,6 +221,14 @@ void rdcp_cmd_send_da_status_response(bool unsolicited = false)
             want_reset = rdcp_msg_in.payload.data[0];
         }
     }
+    else 
+    {
+        /* 
+          When sending unsolicited DA Status Responses (e.g., every three hours), make sure to reset
+          the counters; otherwise, old and outdated values might be used on subsequent DA Status Responses.
+        */
+        want_reset = 0x01;
+    }
 
     last_dasresp_sent = my_millis(); // Track when we sent the most recent DA Status Response
 
