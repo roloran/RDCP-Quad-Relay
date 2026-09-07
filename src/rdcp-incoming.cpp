@@ -30,6 +30,10 @@ char serial_info[INFOLEN];
 extern int64_t last_heartbeat_sent;
 int64_t timestamp_last_hqdev_seen_via_ep = RDCP_TIMESTAMP_ZERO;
 
+uint16_t last_redbutton_cire_seqnr = RDCP_SEQUENCENR_SPECIAL_ZERO;
+uint16_t last_redbutton_ack_origin = RDCP_ADDRESS_SPECIAL_ZERO;
+uint16_t last_redbutton_ack_seqnr  = RDCP_SEQUENCENR_SPECIAL_ZERO;
+
 extern callback_chain CC[NUM_TX_CALLBACKS];
 
 void rdcp_handle_incoming_lora_message(void)
@@ -188,14 +192,24 @@ void rdcp_handle_incoming_lora_message(void)
         if ((rdcp_msg_in.header.origin == CFG.my_cire_button) && (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT))
         {
             serial_writeln("INFO: Red CIRE Button associated with this MERLIN-Base has sent a CIRE!");
-            serial_writeln("DA_CIREBUTTON_PRESSED");
+            if (rdcp_msg_in.header.sequence_number != last_redbutton_cire_seqnr)
+            {
+                last_redbutton_cire_seqnr = rdcp_msg_in.header.sequence_number;
+                serial_writeln("DA_CIREBUTTON_PRESSED");
+            }
         }
         if ((rdcp_msg_in.header.destination == CFG.my_cire_button) && (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK))
         {
             if (rdcp_msg_in.header.origin <= RDCP_HQ_MULTICAST_ADDRESS)
             {
                 serial_writeln("INFO: Red CIRE Button associated with this MERLIN-Base has received an ACK from HQ!");
-                serial_writeln("DA_CIREBUTTON_HQACK");
+                if ((rdcp_msg_in.header.origin != last_redbutton_ack_origin) || 
+                    (rdcp_msg_in.header.sequence_number != last_redbutton_ack_seqnr))
+                {
+                    last_redbutton_ack_origin = rdcp_msg_in.header.origin;
+                    last_redbutton_ack_seqnr  = rdcp_msg_in.header.sequence_number;
+                    serial_writeln("DA_CIREBUTTON_HQACK");
+                }
             }
         }
     }
