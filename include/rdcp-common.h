@@ -57,7 +57,11 @@
 
 #define NRT_LEVEL_LOW    0
 #define NRT_LEVEL_MIDDLE 2
+#ifndef NEUHAUS202609
 #define NRT_LEVEL_HIGH   4
+#else 
+#define NRT_LEVEL_HIGH   2
+#endif
 
 #define SHABUFSIZE 32 
 #define SIGBUFSIZE 128
@@ -83,7 +87,11 @@
 #define TX_RESCHEDULE_TO_CF 0
 
 /// Buffer time within a timeslot between retransmissions according to specs
+#ifndef NEUHAUS202609
 #define RDCP_TIMESLOT_BUFFERTIME 1000
+#else
+#define RDCP_TIMESLOT_BUFFERTIME 500
+#endif
 
 /// How long does it take to schedule and pre-process any retransmission on this device (in ms)?
 #define RETRANSMISSION_PROCESSING_TIME 200

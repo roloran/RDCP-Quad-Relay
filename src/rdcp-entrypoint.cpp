@@ -132,7 +132,13 @@ void rdcp_entrypoint_schedule(void)
         }
 
         int64_t schedtime = 0 - CFG.sf_multiplier * SECONDS_TO_MILLISECONDS; // history: TX_WHEN_CF
-
+#ifdef NEUHAUS202609
+        /* Prioritize HQ RDCP Messages by scheduling them to CFEst instead of appending them to the queue */
+        if (CFG.hqprio_433 && (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
+        {
+            schedtime = TX_WHEN_CF;
+        }
+#endif
         rdcp_txqueue_add(CHANNEL433, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
           important, NOFORCEDTX, TX_CALLBACK_ENTRY, schedtime);
     }
@@ -188,6 +194,89 @@ void rdcp_send_ack_unsigned(uint16_t origin, uint16_t destination, uint16_t seqn
     rdcp_txqueue_add(CHANNEL868DA, data, RDCP_HEADER_SIZE + rm.header.rdcp_payload_length, 
         IMPORTANT, FORCEDTX, TX_CALLBACK_ACK, forced_time);
 
+    return;
+}
+
+#define CIRE_FILTER_NUM_ENTRIES 128
+uint16_t cire_filter_devices[CIRE_FILTER_NUM_ENTRIES] = { RDCP_ADDRESS_SPECIAL_ZERO };
+int64_t  cire_filter_timestamps[CIRE_FILTER_NUM_ENTRIES] = { RDCP_TIMESTAMP_ZERO };
+
+bool rdcp_cire_filter_check_and_set(uint16_t origin, uint64_t timestamp)
+{
+    bool was_already_known = false;
+    char filter_info[INFOLEN];
+
+    if (CFG.cirefilter_time == COUNT_ZERO) return was_already_known;
+    if (origin == RDCP_ADDRESS_SPECIAL_ZERO) return was_already_known;
+
+    /* Check whether already known */
+    for (int i=COUNT_ZERO; i < CIRE_FILTER_NUM_ENTRIES; i++)
+    {
+        if (cire_filter_devices[i] == origin)
+        {
+            // Entry found, but might be expired
+            if (cire_filter_timestamps[i] + CFG.cirefilter_time * MINUTES_TO_MILLISECONDS < timestamp)
+            {
+                snprintf(filter_info, INFOLEN, "INFO: CIRE Filter for %04X was expired, setting again");
+                serial_writeln(filter_info);
+                cire_filter_timestamps[i] = timestamp;
+                return was_already_known;
+            }
+            else 
+            {
+                snprintf(filter_info, INFOLEN, "INFO: CIRE Filter for %04X present and not expired");
+                serial_writeln(filter_info);
+                was_already_known = true;
+            }
+        }
+    }
+
+    if (!was_already_known)
+    {
+        // Find suitable insertion position
+        int pos = RDCP_INDEX_NONE;
+        for (int i=COUNT_ZERO; i < CIRE_FILTER_NUM_ENTRIES; i++)
+        {
+            if (cire_filter_devices == RDCP_ADDRESS_SPECIAL_ZERO)
+            {
+                pos = i;
+                break;
+            }
+        }
+
+        if (pos == RDCP_INDEX_NONE)
+        {
+            serial_writeln("INFO: CIRE Filter table overflow, cannot add more CIRE origins");
+        }
+        else 
+        {
+            cire_filter_devices[pos] = origin;
+            cire_filter_timestamps[pos] = timestamp;
+            snprintf(filter_info, INFOLEN, "INFO: CIRE Filter added for device %04X at position %d",
+                origin, pos);
+            serial_writeln(filter_info);
+        }
+    }
+
+    return was_already_known;
+}
+
+void rdcp_cire_filter_reset_open_state(uint16_t destination)
+{
+    if (destination == RDCP_ADDRESS_SPECIAL_ZERO) return;
+    char filter_info[INFOLEN];
+
+    for (int i=COUNT_ZERO; i < CIRE_FILTER_NUM_ENTRIES; i++)
+    {
+        if (cire_filter_devices[i] == destination)
+        {
+            cire_filter_devices[i] = RDCP_ADDRESS_SPECIAL_ZERO;
+            cire_filter_timestamps[i] = RDCP_TIMESTAMP_ZERO;
+            snprintf(filter_info, INFOLEN, "INFO: Lifting CIRE filter for device %04X at position %d based on HQ ACK",
+              destination, i);
+            serial_writeln(filter_info);
+        }
+    }
     return;
 }
 

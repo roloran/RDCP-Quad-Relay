@@ -58,7 +58,7 @@ void rdcp_send_message_force(uint8_t channel)
                        txq[channel].entries[tx_ongoing[channel]].originally_scheduled_time - 
                        retransmission_count[channel] * 
                             (airtime_in_ms(channel, txq[channel].entries[tx_ongoing[channel]].payload_length) + 
-                            RDCP_TIMESLOT_BUFFERTIME);
+                            CFG.rdcp_timeslot_buffertime);
     char buf[INFOLEN];
     snprintf(buf, INFOLEN, "INFO: TXStart for TXQ%di %d, len %d, TSd %" PRId64 "ms, latency %" PRId64 " ms", 
         channel, tx_ongoing[channel], txq[channel].entries[tx_ongoing[channel]].payload_length, 
@@ -152,7 +152,7 @@ void rdcp_callback_txfin(uint8_t channel)
       */
       int64_t next_timestamp = tx_start[channel] + 
                                airtime_in_ms(channel, txq[channel].entries[tx_ongoing[channel]].payload_length) + 
-                               RDCP_TIMESLOT_BUFFERTIME;
+                               CFG.rdcp_timeslot_buffertime;
       next_timestamp -= RETRANSMISSION_PROCESSING_TIME;
       next_timestamp -= tx_latency[channel] < 250 ? tx_latency[channel] : 250;
 

@@ -118,6 +118,10 @@ struct da_config {
     uint8_t  nrt_level_low                = NRT_LEVEL_LOW;        /// Number of retransmissions in category "low"
     uint8_t  nrt_level_middle             = NRT_LEVEL_MIDDLE;     /// Number of retransmissions in category "middle"
     uint8_t  nrt_level_high               = NRT_LEVEL_HIGH;       /// Number of retransmissions in category "high"
+    uint32_t rdcp_timeslot_buffertime     = RDCP_TIMESLOT_BUFFERTIME;
+    uint32_t cirefilter_time              = 14; /// 0 to disable, minutes to block open CIRE MGs with missing HQ ACK
+    bool     hqprio_433                   = true;
+    bool     hqprio_868                   = true;
 };
 
 #define MAX_LORA_PAYLOAD_SIZE 250

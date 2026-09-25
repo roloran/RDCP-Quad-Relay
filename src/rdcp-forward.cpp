@@ -129,7 +129,23 @@ void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
           // add time proportional to timeslot duration (message length, retransmissions) and own relay id 
           forced_time -= (1 + CFG.relay_identifier) * rdcp_get_timeslot_duration(CHANNEL868DA, data_for_scheduler);
         }
-        
+
+#ifdef NEUHAUS202609
+        /* Prioritize HQ RDCP Messages */
+        if (CFG.hqprio_868 && (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
+        {
+           if (add_random_delay == FORWARD_DELAY_SHORT)
+           {
+                forced_time = TX_WHEN_CF; // Send ASAP as EP 
+           }
+           else if (add_random_delay == FORWARD_DELAY_PROPORTIONAL)
+           {    // Send within the cycle as non-EP
+                forced_time = TX_WHEN_CF;
+                forced_time -= (1 + CFG.relay_identifier) * rdcp_get_timeslot_duration(CHANNEL868DA, data_for_scheduler);
+           }
+        }
+#endif 
+
         char info[INFOLEN];
 
         if ((add_random_delay == FORWARD_DELAY_SHORT) || flag_as_ep_echo)

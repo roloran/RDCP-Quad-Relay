@@ -124,10 +124,10 @@ void rdcp_schedule_relayed_message(int relay_delay)
         we got it from. This must be considered when deriving the absolute timestamp for our own timeslot.
     */
     int64_t previous_timeslot_rest = rdcp_msg_in.header.counter * 
-                        (RDCP_TIMESLOT_BUFFERTIME + airtime_in_ms(current_lora_message.channel, 
+                        (CFG.rdcp_timeslot_buffertime + airtime_in_ms(current_lora_message.channel, 
                             RDCP_HEADER_SIZE+rdcp_msg_in.header.rdcp_payload_length));
 
-    int64_t timeslot_syncer_after_rx = RDCP_TIMESLOT_BUFFERTIME - (my_millis() - current_lora_message.timestamp);
+    int64_t timeslot_syncer_after_rx = CFG.rdcp_timeslot_buffertime - (my_millis() - current_lora_message.timestamp);
 
     int64_t my_timeslot_begin = previous_timeslot_rest + current_lora_message.timestamp + 
                                 timeslot_syncer_after_rx + tx_delay_in_ms - TRANSMISSION_PROCESSING_TIME;

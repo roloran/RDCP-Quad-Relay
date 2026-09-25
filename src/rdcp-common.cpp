@@ -81,7 +81,7 @@ bool rdcp_checkset_cfest_previous_consideration(uint16_t origin, uint16_t seqnr)
 void rdcp_update_cfest_in(uint16_t origin, uint16_t seqnr)
 {
   uint16_t airtime = airtime_in_ms(current_lora_message.channel, RDCP_HEADER_SIZE + rdcp_msg_in.header.rdcp_payload_length);
-  uint16_t airtime_with_buffer = airtime + RDCP_TIMESLOT_BUFFERTIME;
+  uint16_t airtime_with_buffer = airtime + CFG.rdcp_timeslot_buffertime;
 
   uint32_t remaining_current_sender_time = airtime_with_buffer * rdcp_msg_in.header.counter;
 
@@ -305,7 +305,7 @@ int rdcp_get_number_of_tracked_propagation_cycles(void)
 void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t mt, uint8_t relay1, uint8_t relay2, uint8_t relay3, uint16_t origin, uint16_t seqnr)
 {
   uint16_t airtime = airtime_in_ms(channel, len);
-  uint16_t airtime_with_buffer = airtime + RDCP_TIMESLOT_BUFFERTIME;
+  uint16_t airtime_with_buffer = airtime + CFG.rdcp_timeslot_buffertime;
 
   uint32_t remaining_current_sender_time = airtime_with_buffer * (rcnt+1);
 
@@ -472,7 +472,7 @@ int64_t rdcp_get_timeslot_duration(uint8_t channel, uint8_t *data)
   memcpy(&h, data, RDCP_HEADER_SIZE);
 
   uint16_t airtime = airtime_in_ms(channel, RDCP_HEADER_SIZE + h.rdcp_payload_length);
-  uint16_t airtime_with_buffer = airtime + RDCP_TIMESLOT_BUFFERTIME;
+  uint16_t airtime_with_buffer = airtime + CFG.rdcp_timeslot_buffertime;
 
   uint8_t nrt = CFG.nrt_level_low;
   uint8_t mt = h.message_type;

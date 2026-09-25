@@ -534,6 +534,32 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     serial_writeln(info);
     if (persist_selected_commands) persist_serial_command_for_replay(s);
   }
+  else if (s_uppercase.startsWith("RDCPIPG "))
+  { // RDCPIPG 1000
+    // Sets the buffer time / inter packet gap between retransmissions 
+    String p1 = s.substring(8);
+    char buffer[32];
+    p1.toCharArray(buffer, 32);
+    uint32_t new_ipg = strtol(buffer, NULL, 10);
+    CFG.rdcp_timeslot_buffertime = new_ipg;
+    snprintf(info, INFOLEN, "INFO: Changed this device's RDCP v0.4 retransmission inter-packet gap to %d ms", 
+      CFG.rdcp_timeslot_buffertime);
+    serial_writeln(info);
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
+  }
+  else if (s_uppercase.startsWith("CIREFILTER "))
+  { // CIREFILTER 90
+    // Sets the time in minutes to block open CIRE MGs with CIRE re-sends (missing HQ ACK) 
+    String p1 = s.substring(11);
+    char buffer[32];
+    p1.toCharArray(buffer, 32);
+    uint32_t new_cirefilter = strtol(buffer, NULL, 10);
+    CFG.cirefilter_time = new_cirefilter;
+    snprintf(info, INFOLEN, "INFO: Changed this device's open CIRE filter to %d minutes", 
+      CFG.cirefilter_time);
+    serial_writeln(info);
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
+  }
   else if (s_uppercase.startsWith("RDCPRLCR "))
   { // RDCPRLCR 34E
     // Sets the other relays to use for CIREs; 3-hex-digit (other relay's identifiers)
@@ -644,6 +670,26 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     }
     if (persist_selected_commands) if (!failed) persist_serial_command_for_replay(s);
     serial_banner();
+  }
+  else if (s_uppercase.startsWith("HQPRIO433ENABLE"))
+  {
+    CFG.hqprio_433 = true;
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
+  }
+  else if (s_uppercase.startsWith("HQPRIO433DISABLE"))
+  {
+    CFG.hqprio_433 = false;
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
+  }
+  else if (s_uppercase.startsWith("HQPRIO868ENABLE"))
+  {
+    CFG.hqprio_868 = true;
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
+  }
+  else if (s_uppercase.startsWith("HQPRIO868DISABLE"))
+  {
+    CFG.hqprio_868 = false;
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
   }
   else if (s_uppercase.startsWith("BTENABLE"))
   {

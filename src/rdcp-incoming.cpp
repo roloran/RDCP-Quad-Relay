@@ -320,6 +320,15 @@ void rdcp_handle_incoming_lora_message(void)
             return;
         }
 
+#ifdef NEUHAUS202609
+        /* If a HQ ACK was received, reset the CIRE Filter state for the destination */
+        if ((rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK) &&
+            (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
+        {
+            rdcp_cire_filter_reset_open_state(rdcp_msg_in.header.destination);
+        }
+#endif
+
         if (current_lora_message.channel == CHANNEL433)
         {
             if (rdcp_check_forward_868_relevance()) 
@@ -341,7 +350,7 @@ void rdcp_handle_incoming_lora_message(void)
                 if (rdcp_check_entrypoint_messagetype_valid() && 
                     rdcp_relay_allowed_for_device(rdcp_msg_in.header.origin))
                 {
-                    /* If it is a CIRE, we also have to send an ACK back to the MG */
+                    /* If it is a CIRE, we also have to send an ACK back to the MG, even for open-CIRE situations with pending HQ ACKs */
                     if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT)
                     {
                         // Re-schedule other entries on 868 MHz so we get the ACK out first 
@@ -353,6 +362,29 @@ void rdcp_handle_incoming_lora_message(void)
                     /* Forward the message on the 433 MHz channel unless we are the destination */
                     if (rdcp_msg_in.header.destination != CFG.rdcp_address)
                     { 
+#ifdef NEUHAUS202609
+                        /* 
+                            If we received a CIRE from an MG as designed EP, we already scheduled
+                            the EP ACK above. We now check whether we propagated a previous CIRE
+                            by the same MG recently for which the HQ ACK is still pending; if so,
+                            we drop the CIRE if the CIRE Filter is enabled to keep the 433 and
+                            868.Downlink channels clear. This is intended to improve performance
+                            in mass / stress testing situations and not recommended during
+                            real crisis operations. The HQ toggles this functionality remotely.
+                        */
+                        if (CFG.cirefilter_time > COUNT_ZERO) // 0 means CIRE Filter is disabled
+                        {
+                            if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT)
+                            {
+                                bool cire_state_filtered = rdcp_cire_filter_check_and_set(rdcp_msg_in.header.origin, now);
+                                if (cire_state_filtered)
+                                {
+                                    serial_writeln("INFO: Dropping CIRE as EP due to CIRE Filter");
+                                    return;
+                                }
+                            }
+                        }
+#endif
                         rdcp_entrypoint_schedule();
                         DART.num_rdcp_tx++;
                     
@@ -406,7 +438,29 @@ void rdcp_handle_incoming_lora_message(void)
                         rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
                         rdcp_txqueue_reschedule(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
                     }
-                    rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL, DONT_FLAG_AS_EP_ECHO); // add a delay
+                    bool filtered_by_cire_filter = false;
+#ifdef NEUHAUS202609
+                        /* 
+                            If we received a CIRE as non-EP on 868 MHz first, we need to apply the
+                            CIRE Filter to determine whether it should be shadow-forwarded.
+                        */
+                        if (CFG.cirefilter_time > COUNT_ZERO) // 0 means CIRE Filter is disabled
+                        {
+                            if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT)
+                            {
+                                bool cire_state_filtered = rdcp_cire_filter_check_and_set(rdcp_msg_in.header.origin, now);
+                                if (cire_state_filtered)
+                                {
+                                    serial_writeln("INFO: Not forwarding CIRE as non-EP due to CIRE Filter");
+                                    filtered_by_cire_filter = true;
+                                }
+                            }
+                        }
+#endif
+                    if (!filtered_by_cire_filter)
+                    {
+                        rdcp_forward_schedule(FORWARD_DELAY_PROPORTIONAL, DONT_FLAG_AS_EP_ECHO); // add a delay
+                    }
                 }
                 else if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_HEARTBEAT)
                 { // Forward Heartbeats only if their origin is another DA, not an MG
