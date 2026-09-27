@@ -26,19 +26,33 @@ void rdcp_queue_postpone_for_retransmission(uint8_t channel, int highlander, int
 {
     if (channel >= NUMCHANNELSTXQ) return;
     char info[INFOLEN];
+
+    bool postpone_necessary = false;
+
     for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
     {
         if (i == highlander) continue; // don't postpone the one we want to send
         if (txq[channel].entries[i].waiting)
         {
-            while (txq[channel].entries[i].currently_scheduled_time < notbefore)
+            if (txq[channel].entries[i].currently_scheduled_time < notbefore)
             {
-                snprintf(info, INFOLEN, "INFO: TXQ%d entry %d must be re-scheduled due to retransmission, hl %d, nb %" PRId64 ", TSd %" PRId64 " ms",
-                  channel, i, highlander, notbefore, txq[channel].entries[highlander].timeslot_duration);
-                serial_writeln(info);
-                txq[channel].entries[i].currently_scheduled_time += 
-                    txq[channel].entries[highlander].timeslot_duration;
+              postpone_necessary = true;
             }
+        }
+    }
+
+    if (!postpone_necessary) return;
+
+    for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
+    {
+        if (i == highlander) continue; // don't postpone the one we want to send
+        if (txq[channel].entries[i].waiting)
+        {
+            snprintf(info, INFOLEN, "INFO: TXQ%d entry %d must be re-scheduled due to retransmission, hl %d, nb %" PRId64 ", TSd %" PRId64 " ms",
+                     channel, i, highlander, notbefore, txq[channel].entries[highlander].timeslot_duration);
+            serial_writeln(info);
+            txq[channel].entries[i].currently_scheduled_time += 
+                txq[channel].entries[highlander].timeslot_duration;
         }
     }
     return;

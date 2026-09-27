@@ -50,9 +50,10 @@ struct txqueue {
   * @param force_tx True if the message must be sent at its scheduled time, i.e., must not be re-scheduled
   * @param callback_selector Number of the callback to trigger after TX, e.g. TX_CALLBACK_NONE
   * @param forced_time Used in combination with force_tx to specify the TX start time
+  * @param ordering_number 0 for auto-increment, ordering number contribution for new scheduler entry
   * @return true if message was accepted, false otherwise (e.g., queue full)
   */
- bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool important, bool force_tx, uint8_t callback_selector, int64_t forced_time);
+ bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool important, bool force_tx, uint8_t callback_selector, int64_t forced_time, uint16_t ordering_number = 0);
 
  /**
    * Re-schedule the entries in the TX Queue because CFEst has changed meanwhile (offset=0) or by a given offset.

@@ -68,9 +68,9 @@ void rdcp_txqueue_clean(void)
   return;
 }
 
-uint64_t current_ordering_number = ONLY_ONE;
+uint64_t current_ordering_number = 100000; // was ONLY_ONE;
 
-bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool important, bool force_tx, uint8_t callback_selector, int64_t forced_time)
+bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool important, bool force_tx, uint8_t callback_selector, int64_t forced_time, uint16_t ordering_number)
 {
     if (channel >= NUMCHANNELSTXQ)
     {
@@ -109,7 +109,14 @@ bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool importan
         txq[channel].entries[i].callback_selector = callback_selector;
         txq[channel].entries[i].force_tx = force_tx;
         txq[channel].entries[i].important = important;
-        txq[channel].entries[i].ordering_number = current_ordering_number++;
+        if (ordering_number == 0)
+        {
+          txq[channel].entries[i].ordering_number = current_ordering_number++;
+        }
+        else 
+        {
+          txq[channel].entries[i].ordering_number = ordering_number;
+        }
         if (forced_time == 0)
         { /* No time given, schedule as early as possible when channel is free */
           txq[channel].entries[i].originally_scheduled_time = rdcp_get_channel_free_estimation(channel);
@@ -389,6 +396,7 @@ bool rdcp_txqueue_loop(void)
           }
         }
 
+#ifdef DEFAULTSCHEDULER
         /* If we did not find a suitable force-tx message, continue with... */
         if (tx_ongoing[channel] == -1)
         {
@@ -412,6 +420,41 @@ bool rdcp_txqueue_loop(void)
               }
             }
           }
+        }
+#else
+        /* If we did not find a suitable force-tx message, continue with... */
+        if (tx_ongoing[channel] == -1)
+        {
+          // ... pass 2: non-force-tx, in order
+
+          /* Find the index of the lowest ordering number */
+          int idx_lowest_ordering_number = -1;
+          for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
+          {
+            if (txq[channel].entries[i].waiting && 
+               (txq[channel].entries[i].force_tx == false))
+            {
+              if (idx_lowest_ordering_number == -1)
+              {
+                idx_lowest_ordering_number = i;
+              }
+              else
+              {
+                if (txq[channel].entries[idx_lowest_ordering_number].ordering_number > txq[channel].entries[i].ordering_number)
+                {
+                  idx_lowest_ordering_number = i;
+                }
+              }
+            }
+          } 
+
+          /* If the time for a found entry with lowest ordering number has come, use it */
+          if ((idx_lowest_ordering_number != -1) && 
+              (txq[channel].entries[idx_lowest_ordering_number].currently_scheduled_time <= now))
+          {
+            tx_ongoing[channel] = idx_lowest_ordering_number;
+          }
+#endif
         }
 
         if (tx_ongoing[channel] != -1) { result = true; cpu_fast(); } else { continue; }

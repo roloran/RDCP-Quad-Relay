@@ -132,15 +132,17 @@ void rdcp_entrypoint_schedule(void)
         }
 
         int64_t schedtime = 0 - CFG.sf_multiplier * SECONDS_TO_MILLISECONDS; // history: TX_WHEN_CF
+        uint16_t ordering_number = 0;
 #ifdef NEUHAUS202609
         /* Prioritize HQ RDCP Messages by scheduling them to CFEst instead of appending them to the queue */
         if (CFG.hqprio_433 && (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
         {
+            ordering_number = rdcp_msg_in.header.sequence_number;
             schedtime = TX_WHEN_CF;
         }
 #endif
         rdcp_txqueue_add(CHANNEL433, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
-          important, NOFORCEDTX, TX_CALLBACK_ENTRY, schedtime);
+          important, NOFORCEDTX, TX_CALLBACK_ENTRY, schedtime, ordering_number);
     }
 
     return;

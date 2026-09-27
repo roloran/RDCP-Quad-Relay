@@ -130,10 +130,13 @@ void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
           forced_time -= (1 + CFG.relay_identifier) * rdcp_get_timeslot_duration(CHANNEL868DA, data_for_scheduler);
         }
 
+        uint16_t ordering_number = 0;
+
 #ifdef NEUHAUS202609
         /* Prioritize HQ RDCP Messages */
         if (CFG.hqprio_868 && (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
         {
+           ordering_number = rdcp_msg_in.header.sequence_number;
            if (add_random_delay == FORWARD_DELAY_SHORT)
            {
                 forced_time = TX_WHEN_CF; // Send ASAP as EP 
@@ -155,7 +158,7 @@ void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
             serial_writeln(info);
 
             rdcp_txqueue_add(CHANNEL868DA, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
-            important, NOFORCEDTX, TX_CALLBACK_FORWARD, forced_time);
+            important, NOFORCEDTX, TX_CALLBACK_FORWARD, forced_time, ordering_number);
         }
         else
         {
@@ -164,7 +167,7 @@ void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
             serial_writeln(info);
 
             rdcp_txqueue_add(CHANNEL868DA, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
-            important, FORCEDTX, TX_CALLBACK_FORWARD, my_millis()-forced_time); // absolute time = now - (negative relative time)
+            important, FORCEDTX, TX_CALLBACK_FORWARD, my_millis()-forced_time, ordering_number); // absolute time = now - (negative relative time)
         }
     }
 
