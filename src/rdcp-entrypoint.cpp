@@ -217,14 +217,16 @@ bool rdcp_cire_filter_check_and_set(uint16_t origin, uint64_t timestamp)
             // Entry found, but might be expired
             if (cire_filter_timestamps[i] + CFG.cirefilter_time * MINUTES_TO_MILLISECONDS < timestamp)
             {
-                snprintf(filter_info, INFOLEN, "INFO: CIRE Filter for %04X was expired, setting again");
+                snprintf(filter_info, INFOLEN, "INFO: CIRE Filter for %04X was expired, setting again",
+                  origin);
                 serial_writeln(filter_info);
                 cire_filter_timestamps[i] = timestamp;
                 return was_already_known;
             }
             else 
             {
-                snprintf(filter_info, INFOLEN, "INFO: CIRE Filter for %04X present and not expired");
+                snprintf(filter_info, INFOLEN, "INFO: CIRE Filter for %04X present and not expired",
+                  origin);
                 serial_writeln(filter_info);
                 was_already_known = true;
             }
@@ -237,7 +239,7 @@ bool rdcp_cire_filter_check_and_set(uint16_t origin, uint64_t timestamp)
         int pos = RDCP_INDEX_NONE;
         for (int i=COUNT_ZERO; i < CIRE_FILTER_NUM_ENTRIES; i++)
         {
-            if (cire_filter_devices == RDCP_ADDRESS_SPECIAL_ZERO)
+            if (cire_filter_devices[i] == RDCP_ADDRESS_SPECIAL_ZERO)
             {
                 pos = i;
                 break;
