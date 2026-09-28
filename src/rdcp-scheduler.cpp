@@ -562,6 +562,58 @@ void rdcp_dump_txq(uint8_t channel)
   return;
 }
 
+bool rdcp_txqueue_reschedule_exp(uint8_t channel, int64_t offset)
+{
+    if (channel >= NUMCHANNELSTXQ) return false;
+
+    char info[INFOLEN];
+    int64_t now = my_millis();
+    int64_t cfest = rdcp_get_channel_free_estimation(channel);
+    int64_t delta = cfest - now;
+    int64_t rescheduled_by = 0;
+    if (delta < 0) delta = 0; // do not schedule back in time
+    bool dropped = false;
+
+    serial_writeln("INFO: TX Queue Rescheduling based on CFEst");
+
+    /* Look for the 'currently scheduled' timestamp of the earliest
+       TXQ entry to be sent before channel becomes free */
+    int64_t next_timestamp = cfest;
+    for (int i=COUNT_ZERO; i < MAX_TXQUEUE_ENTRIES; i++)
+    {
+        if (!txq[channel].entries[i].waiting)      continue; // only waiting entries are relevant
+        if (txq[channel].entries[i].in_process)    continue; // skip if currently in process
+        if (txq[channel].entries[i].force_tx)      continue; // skip if it has a forced time
+        if (txq[channel].entries[i].currently_scheduled_time  < next_timestamp)
+          next_timestamp = txq[channel].entries[i].currently_scheduled_time;
+    }
+    int64_t maximum_diff_to_cfest = cfest - next_timestamp;
+    int reschedule_mode = 42;
+
+    for (int i=COUNT_ZERO; i < MAX_TXQUEUE_ENTRIES; i++)
+    {
+      if (txq[channel].entries[i].waiting)
+      {
+        if (txq[channel].entries[i].in_process) continue;
+        if (txq[channel].entries[i].force_tx) continue;
+
+        txq[channel].entries[i].num_of_reschedules++;
+        txq[channel].entries[i].currently_scheduled_time += maximum_diff_to_cfest;
+        rescheduled_by = maximum_diff_to_cfest;
+      }
+      if (rescheduled_by > 0)
+      {
+        snprintf(info, INFOLEN, "INFO: TXQ%d entry %d re-scheduled (mode %d) by %" PRId64 " ms, r%" PRId64 "ms, CFr%" PRId64 "ms",
+           channel, i, reschedule_mode, rescheduled_by, txq[channel].entries[i].currently_scheduled_time - now, cfest-now);
+        serial_writeln(info);
+      }
+    }
+
+    rdcp_dump_txq(channel);
+
+    return dropped;
+}
+
 void rdcp_reschedule_on_busy_channel(uint8_t channel)
 {
   if (channel >= NUMCHANNELSTXQ) return;
@@ -580,7 +632,9 @@ void rdcp_reschedule_on_busy_channel(uint8_t channel)
     snprintf(info, INFOLEN, "INFO: Rescheduling CHANNEL%" PRIu8 " by %" PRId64 " ms due to timediff CFEst-now", channel, timediff);
     serial_writeln(info);
 
-    rdcp_txqueue_reschedule(channel, timediff);
+    // rdcp_txqueue_reschedule(channel, timediff);
+    /* Reschedule based on CFEst instead of moving proportionally (Neuhaus 202609) */
+    rdcp_txqueue_reschedule_exp(channel, 0);
   }
 
   return;
