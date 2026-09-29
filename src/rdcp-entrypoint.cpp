@@ -138,7 +138,7 @@ void rdcp_entrypoint_schedule(void)
         if (CFG.hqprio_433 && (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
         {
             ordering_number = rdcp_msg_in.header.sequence_number;
-            int64_t cfest_diff_downlink = rdcp_get_channel_free_estimation(CHANNEL868MG) - now;
+            int64_t cfest_diff_downlink = rdcp_get_channel_free_estimation(CHANNEL868MG) - my_millis();
             if (cfest_diff_downlink < 0) cfest_diff_downlink = 0;
             schedtime = TX_WHEN_CF - 15 * SECONDS_TO_MILLISECONDS - cfest_diff_downlink;
         }

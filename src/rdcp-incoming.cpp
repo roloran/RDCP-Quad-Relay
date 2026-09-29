@@ -117,7 +117,8 @@ void rdcp_handle_incoming_lora_message(void)
                     now = my_millis(); // refresh timestamp
                     if (now > cfest_max) cfest_max = now;
                     rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + RDCP_EP_HEADSTART_DELAY);
-                    rdcp_txqueue_reschedule(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
+                    // rdcp_txqueue_reschedule(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
+                    rdcp_txqueue_reschedule_exp(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
                 }
                 return;
             }
@@ -354,7 +355,8 @@ void rdcp_handle_incoming_lora_message(void)
                     if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT)
                     {
                         // Re-schedule other entries on 868 MHz so we get the ACK out first 
-                        rdcp_txqueue_reschedule(CHANNEL868DA, CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
+                        //rdcp_txqueue_reschedule(CHANNEL868DA, CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
+                        rdcp_txqueue_reschedule_exp(CHANNEL868DA, CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
                         rdcp_send_ack_unsigned(CFG.rdcp_address, rdcp_msg_in.header.origin, 
                                                rdcp_msg_in.header.sequence_number); 
                     }
@@ -436,7 +438,8 @@ void rdcp_handle_incoming_lora_message(void)
                         now = my_millis(); // refresh timestamp
                         if (now > cfest_max) cfest_max = now;
                         rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
-                        rdcp_txqueue_reschedule(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
+                        // rdcp_txqueue_reschedule(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
+                        rdcp_txqueue_reschedule_exp(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
                     }
                     bool filtered_by_cire_filter = false;
 #ifdef NEUHAUS202609

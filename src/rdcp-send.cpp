@@ -112,7 +112,8 @@ void rdcp_send_message_force(uint8_t channel)
 
     rdcp_update_cfest_out(channel, txq[channel].entries[tx_ongoing[channel]].payload_length, 
       rcnt, mt, relay1, relay2, relay3, origin, seqnr);
-    rdcp_txqueue_reschedule(channel, -1);
+    // rdcp_txqueue_reschedule(channel, -1);
+    rdcp_txqueue_reschedule_exp(channel, 0);
 
     return; 
 }
@@ -220,7 +221,8 @@ void rdcp_callback_txfin(uint8_t channel)
       int64_t my_delay = 1 * SECONDS_TO_MILLISECONDS + 100 * (1 + CFG.relay_identifier) * CFG.sf_multiplier;
       snprintf(buf, INFOLEN, "INFO: Rescheduling CHANNEL%" PRIu8 " by %" PRId64 " ms due to finished transmission", channel, my_delay);
       serial_writeln(buf);
-      rdcp_txqueue_reschedule(channel, 0 - my_delay);
+      // rdcp_txqueue_reschedule(channel, 0 - my_delay);
+      rdcp_txqueue_reschedule_exp(channel, 0 - my_delay);
     }
   
     return;
@@ -262,7 +264,8 @@ bool rdcp_callback_cad(uint8_t channel, bool cad_busy)
         int64_t my_delay = 1 * SECONDS_TO_MILLISECONDS + 100 * CFG.relay_identifier * CFG.sf_multiplier;
         snprintf(buf, INFOLEN, "INFO: Rescheduling CHANNEL%d by %" PRId64 " ms due to %d. CAD retry", channel, my_delay, retry);
         serial_writeln(buf);
-        rdcp_txqueue_reschedule(channel, 0 - my_delay);
+        // rdcp_txqueue_reschedule(channel, 0 - my_delay);
+        rdcp_txqueue_reschedule_exp(channel, 0 - my_delay);
         if (CFEst[channel] < my_millis() + my_delay) CFEst[channel] = my_millis() + my_delay; // Don't re-schedule twice
       }
     }
@@ -279,7 +282,8 @@ bool rdcp_callback_cad(uint8_t channel, bool cad_busy)
       int64_t my_delay = 2 * SECONDS_TO_MILLISECONDS + 50 * CFG.relay_identifier * CFG.sf_multiplier;
       snprintf(buf, INFOLEN, "INFO: Rescheduling CHANNEL%d by %" PRId64 " ms due to %d. CAD retry", channel, my_delay, retry);
       serial_writeln(buf);
-      rdcp_txqueue_reschedule(channel, 0 - my_delay);
+      // rdcp_txqueue_reschedule(channel, 0 - my_delay);
+      rdcp_txqueue_reschedule_exp(channel, 0 - my_delay);
       if (CFEst[channel] < my_millis() + my_delay) CFEst[channel] = my_millis() + my_delay; // Don't re-schedule twice
     }
     else if ((retry >= 6) && (retry <= 9))
@@ -295,7 +299,8 @@ bool rdcp_callback_cad(uint8_t channel, bool cad_busy)
       int64_t my_delay = 3 * SECONDS_TO_MILLISECONDS + 50 * CFG.relay_identifier * CFG.sf_multiplier;
       snprintf(buf, INFOLEN, "INFO: Rescheduling CHANNEL%d by %" PRId64 " ms due to %d. CAD retry", channel, my_delay, retry);
       serial_writeln(buf);
-      rdcp_txqueue_reschedule(channel, 0 - my_delay);
+      // rdcp_txqueue_reschedule(channel, 0 - my_delay);
+      rdcp_txqueue_reschedule_exp(channel, 0 - my_delay);
       if (CFEst[channel] < my_millis() + my_delay) CFEst[channel] = my_millis() + my_delay; // Don't re-schedule twice
     }
     else if (retry >= 15)
