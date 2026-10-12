@@ -133,7 +133,7 @@ void rdcp_entrypoint_schedule(void)
 
         int64_t schedtime = 0 - CFG.sf_multiplier * SECONDS_TO_MILLISECONDS; // history: TX_WHEN_CF
         uint16_t ordering_number = 0;
-#ifdef NEUHAUS202609
+#ifndef NO_HQ_PRIORITY
         /* Prioritize HQ RDCP Messages by scheduling them to CFEst instead of appending them to the queue */
         if (CFG.hqprio_433 && (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
         {

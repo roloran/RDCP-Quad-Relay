@@ -57,7 +57,7 @@
 
 #define NRT_LEVEL_LOW    0
 #define NRT_LEVEL_MIDDLE 2
-#ifndef NEUHAUS202609
+#ifndef DEFAULTNRT022
 #define NRT_LEVEL_HIGH   4
 #else 
 #define NRT_LEVEL_HIGH   2
@@ -87,7 +87,7 @@
 #define TX_RESCHEDULE_TO_CF 0
 
 /// Buffer time within a timeslot between retransmissions according to specs
-#ifndef NEUHAUS202609
+#ifndef DEFAULTBUFFERTIME500
 #define RDCP_TIMESLOT_BUFFERTIME 1000
 #else
 #define RDCP_TIMESLOT_BUFFERTIME 500
@@ -103,6 +103,15 @@
 
 /// After how many minutes do we assume that the HQ has chosen a non-working EP if we did not hear HQ messages on 433 MHz?
 #define TIMEOUT_ASSUME_NONWORKING_EP_FOR_HQ 20 
+
+/// After how many seconds of a free channel should the TX Queue be compressed?
+#define FREE_CHANNEL_DURATION_FOR_COMPRESSION_IN_SECONDS 3
+
+/// Compress only if at least one queues message is scheduled for more than this number of seconds into the future 
+#define COMPRESS_ONLY_IF_LATEST_MESSAGE_IS_IN_AT_LEAST_SECONDS 20
+
+/// Compress only if we gain at least this many seconds in total
+#define COMPRESS_ONLY_IF_IT_GAINS_AT_LEAST_SECONDS 2
 
 /**
   * Data structure for an RDCP v0.4 Header

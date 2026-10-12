@@ -132,7 +132,7 @@ void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
 
         uint16_t ordering_number = 0;
 
-#ifdef NEUHAUS202609
+#ifndef NO_HQ_PRIORITY
         /* Prioritize HQ RDCP Messages */
         if (CFG.hqprio_868 && (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
         {

@@ -68,6 +68,15 @@ void rdcp_txqueue_clean(void)
   return;
 }
 
+/*
+  The ordering number is used to turn the TX Queues into a priority queue with two separate FIFO ranges.
+  RDCP Messages sent by an HQ device use their RDCP Sequence Number as ordering number, so they will be sent
+  first while keeping the order for each HQ Origin address.
+  RDCP Messages sent by other devices will use the next higher number starting at current_ordering_number.
+  For those other devices' messages, the ordering number used will be unique.
+  If multiple HQ devices overlap in their sequence numbers, it does not matter which message is processed first
+  as there is no prioritization among HQ devices necessary.
+*/
 uint64_t current_ordering_number = 100000; // was ONLY_ONE;
 
 bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool important, bool force_tx, uint8_t callback_selector, int64_t forced_time, uint16_t ordering_number)
@@ -163,7 +172,7 @@ bool rdcp_txqueue_add(uint8_t channel, uint8_t *data, uint8_t len, bool importan
     return false;
 }
 
-bool rdcp_txqueue_reschedule(uint8_t channel, int64_t offset)
+bool rdcp_txqueue_reschedule_obsolete(uint8_t channel, int64_t offset)
 {
     if (channel >= NUMCHANNELSTXQ) return false;
 
@@ -215,6 +224,11 @@ bool rdcp_txqueue_reschedule(uint8_t channel, int64_t offset)
         else
         {
           delta = -1 * delta;
+          /* 
+            This is the problem addressed by the new re-scheduling: Not all entries are 
+            re-scheduled, but only those in a conflict interval, which may lead to 
+            undesired re-ordering of messages.
+          */
           if (txq[channel].entries[i].currently_scheduled_time < (cfest + delta))
           {
             txq[channel].entries[i].currently_scheduled_time += maximum_diff_to_cfest + delta;
@@ -268,7 +282,7 @@ void rdcp_txqueue_compress(void)
 
   for (int channel=0; channel < NUMCHANNELSTXQ; channel++) 
   {
-    if (now > rdcp_get_channel_free_estimation(channel) + 10 * SECONDS_TO_MILLISECONDS * CFG.sf_multiplier)
+    if (now > rdcp_get_channel_free_estimation(channel) + FREE_CHANNEL_DURATION_FOR_COMPRESSION_IN_SECONDS * SECONDS_TO_MILLISECONDS * CFG.sf_multiplier)
     { /* Channel is unused for some time; check whether we have something to send earlier. */
       bool has_forced_entry = false;
       int earliest = RDCP_INDEX_NONE;
@@ -303,13 +317,13 @@ void rdcp_txqueue_compress(void)
         }
       }
       if (has_forced_entry) continue; // Skip compression to avoid clash with hard-scheduled messages
-      if (earliest == RDCP_INDEX_NONE) continue;   // No entry found to send earlier
-      if (latest_scheduled_time - now < 2 * MINUTES_TO_MILLISECONDS) continue; // compress only if we have at least one entry scheduled for more than 2 minutes in the future
-      if (lowest_ordnr == COUNT_ZERO) continue;
+      if (earliest == RDCP_INDEX_NONE) continue; // No entry found to send earlier
+      if (latest_scheduled_time - now < COMPRESS_ONLY_IF_LATEST_MESSAGE_IS_IN_AT_LEAST_SECONDS * SECONDS_TO_MILLISECONDS) continue; // compress only if we have at least one entry scheduled for more than 2 minutes in the future
+      if (lowest_ordnr == COUNT_ZERO) continue; // Skip if no entry with ordering number was found
 
-      //int64_t delta = txq[channel].entries[earliest].currently_scheduled_time - now;
+      // Re-schedule based on next message to send (based on ordering number)
       int64_t delta = txq[channel].entries[lowest_ordnr_pos].currently_scheduled_time - now;
-      if (delta > 3 * SECONDS_TO_MILLISECONDS * CFG.sf_multiplier)
+      if (delta > COMPRESS_ONLY_IF_IT_GAINS_AT_LEAST_SECONDS * SECONDS_TO_MILLISECONDS * CFG.sf_multiplier)
       {
         for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
         {
@@ -410,7 +424,7 @@ bool rdcp_txqueue_loop(void)
         /* If we did not find a suitable force-tx message, continue with... */
         if (tx_ongoing[channel] == -1)
         {
-          // ... pass 2: non-force-tx
+          // ... pass 2: non-force-tx, based on sending time and ordering number
           for (int i=0; i < MAX_TXQUEUE_ENTRIES; i++)
           {
             if (txq[channel].entries[i].waiting && 
@@ -435,7 +449,7 @@ bool rdcp_txqueue_loop(void)
         /* If we did not find a suitable force-tx message, continue with... */
         if (tx_ongoing[channel] == -1)
         {
-          // ... pass 2: non-force-tx, in order
+          // ... pass 2: non-force-tx, based on ordering number
 
           /* Find the index of the lowest ordering number */
           int idx_lowest_ordering_number = -1;
@@ -477,8 +491,7 @@ bool rdcp_txqueue_loop(void)
             serial_writeln("WARNING: Resolving scheduling clash (non-ftx message scheduled for now, but channel busy) by re-scheduling");
             tx_ongoing[channel] = -1;
             result = false;
-            // rdcp_txqueue_reschedule(channel, 0); // re-schedule based on channel's CFest
-            rdcp_txqueue_reschedule_exp(channel, 0);
+            rdcp_txqueue_reschedule_cfest(channel, 0);
             return false;
           }
         }
@@ -573,7 +586,7 @@ void rdcp_dump_txq(uint8_t channel)
   return;
 }
 
-bool rdcp_txqueue_reschedule_exp(uint8_t channel, int64_t offset)
+bool rdcp_txqueue_reschedule_cfest(uint8_t channel, int64_t offset)
 {
     if (channel >= NUMCHANNELSTXQ) return false;
 
@@ -585,8 +598,6 @@ bool rdcp_txqueue_reschedule_exp(uint8_t channel, int64_t offset)
     if (delta < 0) delta = 0; // do not schedule back in time
     bool dropped = false;
 
-    serial_writeln("INFO: TX Queue Rescheduling based on CFEst");
-
     /* Look for the 'currently scheduled' timestamp of the earliest
        TXQ entry to be sent before channel becomes free */
     int64_t next_timestamp = cfest;
@@ -595,20 +606,24 @@ bool rdcp_txqueue_reschedule_exp(uint8_t channel, int64_t offset)
         if (!txq[channel].entries[i].waiting)      continue; // only waiting entries are relevant
         if (txq[channel].entries[i].in_process)    continue; // skip if currently in process
         if (txq[channel].entries[i].force_tx)      continue; // skip if it has a forced time
-        if (txq[channel].entries[i].currently_scheduled_time  < next_timestamp)
+        if (txq[channel].entries[i].currently_scheduled_time < next_timestamp)
           next_timestamp = txq[channel].entries[i].currently_scheduled_time;
     }
     int64_t maximum_diff_to_cfest = cfest - next_timestamp;
-    int reschedule_mode = 42;
+
     if (offset < 0)
     {
       maximum_diff_to_cfest += -1 * offset;
-      serial_writeln("INFO: TX Queue Rescheduling based on CFEst adds (negative) offset");
+      serial_writeln("INFO: TX Queue Rescheduling based on CFEst, adding negative offset");
     }
-    if (offset > 0)
+    else if (offset > 0)
     {
       maximum_diff_to_cfest += offset;
-      serial_writeln("INFO: TX Queue Rescheduling based on CFEst adds (positive) offset");
+      serial_writeln("INFO: TX Queue Rescheduling based on CFEst, adding positive offset");
+    }
+    else 
+    {
+      serial_writeln("INFO: TX Queue Rescheduling based on CFEst, no offset");
     }
 
     for (int i=COUNT_ZERO; i < MAX_TXQUEUE_ENTRIES; i++)
@@ -623,8 +638,8 @@ bool rdcp_txqueue_reschedule_exp(uint8_t channel, int64_t offset)
         rescheduled_by = maximum_diff_to_cfest;
         if (rescheduled_by > 0)
         {
-          snprintf(info, INFOLEN, "INFO: TXQ%d entry %d re-scheduled (mode %d) by %" PRId64 " ms, r%" PRId64 "ms, CFr%" PRId64 "ms",
-             channel, i, reschedule_mode, rescheduled_by, txq[channel].entries[i].currently_scheduled_time - now, cfest-now);
+          snprintf(info, INFOLEN, "INFO: TXQ%d entry %d re-scheduled (mode CFEst) by %" PRId64 " ms, r%" PRId64 "ms, CFr%" PRId64 "ms",
+             channel, i, rescheduled_by, txq[channel].entries[i].currently_scheduled_time - now, cfest-now);
           serial_writeln(info);
         }
       }
@@ -653,9 +668,8 @@ void rdcp_reschedule_on_busy_channel(uint8_t channel)
     snprintf(info, INFOLEN, "INFO: Rescheduling CHANNEL%" PRIu8 " by %" PRId64 " ms due to timediff CFEst-now", channel, timediff);
     serial_writeln(info);
 
-    // rdcp_txqueue_reschedule(channel, timediff);
     /* Reschedule based on CFEst instead of moving proportionally (Neuhaus 202609) */
-    rdcp_txqueue_reschedule_exp(channel, 0);
+    rdcp_txqueue_reschedule_cfest(channel, 0);
   }
 
   return;

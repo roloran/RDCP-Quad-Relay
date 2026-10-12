@@ -63,8 +63,8 @@ struct txqueue {
    * @param offset Relative time offset to re-schedule all entries by, or 0 if CFEst has changed and serves as baseline
    * @return true if it at least one scheduled message was dropped due to excessive re-scheduling or postponing 
    */
- bool rdcp_txqueue_reschedule(uint8_t channel, int64_t offset);
- bool rdcp_txqueue_reschedule_exp(uint8_t channel, int64_t offset);
+ bool rdcp_txqueue_reschedule_cfest(uint8_t channel, int64_t offset);
+ bool rdcp_txqueue_reschedule_obsolete(uint8_t channel, int64_t offset);
  
  /**
    * RDCP TX Queue Loop to be called periodically to start sending outgoing

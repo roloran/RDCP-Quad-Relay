@@ -117,8 +117,7 @@ void rdcp_handle_incoming_lora_message(void)
                     now = my_millis(); // refresh timestamp
                     if (now > cfest_max) cfest_max = now;
                     rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + RDCP_EP_HEADSTART_DELAY);
-                    // rdcp_txqueue_reschedule(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
-                    rdcp_txqueue_reschedule_exp(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
+                    rdcp_txqueue_reschedule_cfest(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
                 }
                 return;
             }
@@ -190,7 +189,15 @@ void rdcp_handle_incoming_lora_message(void)
     if (CFG.my_cire_button > RDCP_ADDRESS_SPECIAL_ZERO)
     if ((rdcp_msg_in.header.origin == CFG.my_cire_button) || (rdcp_msg_in.header.destination == CFG.my_cire_button))
     {
-        if ((rdcp_msg_in.header.origin == CFG.my_cire_button) && (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT))
+        /* 
+            Only send DA_CIREBUTTON_PRESSED if both origin and sender match this MERLIN Base's Red Button.
+            With HQ ACKs transported with priority, there otherwise might be a race condition in which another
+            MERLIN Base forwards the original CIRE after the HQ ACK has already been received, and this 
+            may confuse the DA implementation in this MERLIN Base.
+        */
+        if ((rdcp_msg_in.header.origin == CFG.my_cire_button) && 
+            (rdcp_msg_in.header.sender == CFG.my_cire_button) && 
+            (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT))
         {
             serial_writeln("INFO: Red CIRE Button associated with this MERLIN-Base has sent a CIRE!");
             if (rdcp_msg_in.header.sequence_number != last_redbutton_cire_seqnr)
@@ -321,8 +328,8 @@ void rdcp_handle_incoming_lora_message(void)
             return;
         }
 
-#ifdef NEUHAUS202609
-        /* If a HQ ACK was received, reset the CIRE Filter state for the destination */
+#ifndef NO_CIRE_FILTER
+        /* If an HQ ACK was received, reset the CIRE Filter state for the destination */
         if ((rdcp_msg_in.header.message_type == RDCP_MSGTYPE_ACK) &&
             (rdcp_msg_in.header.origin <= RDCP_ADDRESS_HQ_UPPERBOUND))
         {
@@ -355,8 +362,7 @@ void rdcp_handle_incoming_lora_message(void)
                     if (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_CITIZEN_REPORT)
                     {
                         // Re-schedule other entries on 868 MHz so we get the ACK out first 
-                        //rdcp_txqueue_reschedule(CHANNEL868DA, CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
-                        rdcp_txqueue_reschedule_exp(CHANNEL868DA, CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
+                        rdcp_txqueue_reschedule_cfest(CHANNEL868DA, CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
                         rdcp_send_ack_unsigned(CFG.rdcp_address, rdcp_msg_in.header.origin, 
                                                rdcp_msg_in.header.sequence_number); 
                     }
@@ -364,7 +370,7 @@ void rdcp_handle_incoming_lora_message(void)
                     /* Forward the message on the 433 MHz channel unless we are the destination */
                     if (rdcp_msg_in.header.destination != CFG.rdcp_address)
                     { 
-#ifdef NEUHAUS202609
+#ifndef NO_CIRE_FILTER
                         /* 
                             If we received a CIRE from an MG as designed EP, we already scheduled
                             the EP ACK above. We now check whether we propagated a previous CIRE
@@ -438,11 +444,10 @@ void rdcp_handle_incoming_lora_message(void)
                         now = my_millis(); // refresh timestamp
                         if (now > cfest_max) cfest_max = now;
                         rdcp_update_channel_free_estimation(CHANNEL868DA, cfest_max + CFG.corridor_basetime * SECONDS_TO_MILLISECONDS);
-                        // rdcp_txqueue_reschedule(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
-                        rdcp_txqueue_reschedule_exp(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
+                        rdcp_txqueue_reschedule_cfest(CHANNEL868DA, TX_RESCHEDULE_TO_CF);
                     }
                     bool filtered_by_cire_filter = false;
-#ifdef NEUHAUS202609
+#ifndef NO_CIRE_FILTER
                         /* 
                             If we received a CIRE as non-EP on 868 MHz first, we need to apply the
                             CIRE Filter to determine whether it should be shadow-forwarded.
