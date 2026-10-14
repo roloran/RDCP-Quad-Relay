@@ -4,6 +4,8 @@ This repository holds the ESP32S3 firmware implementation for four-channel MERLI
 
 It is built upon RDCP v0.4.2026 and our previous two-channel RDCP-Relay implementation, leveraging one additional 868 MHz channel for communication with MERLIN-Messenger devices and another one for sniffing and tunneling LoRaWAN sensor data. It is implemented for our custom PCB, using an ESP32S3 MCU with four EBYTE LoRa radios.
 
+868DA transmissions rotate through all three 868 MHz radios. Between transmissions, one radio receives each 868 MHz channel. 868DA reception pauses during 868DA CAD and transmission.
+
 ## Compilation and Flashing
 
 This repository uses PlatformIO (PIO), and thus all dependency management and workflows should be handled automatically or at least similar to other PIO projects.
@@ -24,7 +26,7 @@ Before the quad-channel relay will work, it needs to be configured via a series 
 
 The commands `SHOW CONFIG` and `RESET CONFIG` can be used similar to other ROLORAN RDCP devices. For initial configuration, the following commands *must* be used once:
 
-- `LORAFREQ 433.175 869.525 869.000 868.100` sets the LoRa channel frequencies for all radios in MHz. Note that the `%.3f` format must be used. The order, also for the subsequent commands, is CHANNEL433, CHANNEL868DA, CHANNEL868MG, CHANNEL868LW.
+- `LORAFREQ 433.175 869.525 869.000 868.100` sets the LoRa channel frequencies in MHz. Note that the `%.3f` format must be used. The order, also for the subsequent commands, is CHANNEL433, CHANNEL868DA, CHANNEL868MG, CHANNEL868LW.
 - `LORABW 125 125 125 125` sets the LoRa channel bandwidth for all radios in kHz.
 - `LORASF 07 07 07 07` sets the LoRa spreading factor for all radios. The use of leading zeros is mandatory for `SF < 10`.
 - `LORACR 5 5 5 5` sets the LoRa coding rates for all radios in RadioLib format (5 to 8).

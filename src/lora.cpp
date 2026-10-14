@@ -6,6 +6,7 @@
 #include "hal.h"
 #include "rdcp-send.h"
 #include "rdcp-common.h"
+#include "lora-868-route.h"
 
 #ifdef VSPI
 SPIClass vspi = SPIClass(VSPI);
@@ -27,6 +28,8 @@ SPIClass hspi = SPIClass(HSPI);
 #define SPI_ONE vspi 
 #define SPI_TWO vspi
 
+constexpr float RADIO_CURRENT_LIMIT_MA = 140.0;
+
 MY_SX1262 radio868da = new Module(RADIO868DACS, RADIO868DADIO1, RADIO868DARESET, RADIO868DABUSY, SPI_ONE, SPISettings(1000000, MSBFIRST, SPI_MODE0));
 MY_SX1262 radio868mg = new Module(RADIO868MGCS, RADIO868MGDIO1, RADIO868MGRESET, RADIO868MGBUSY, SPI_ONE, SPISettings(1000000, MSBFIRST, SPI_MODE0));
 MY_SX1262 radio868lw = new Module(RADIO868LWCS, RADIO868LWDIO1, RADIO868LWRESET, RADIO868LWBUSY, SPI_ONE, SPISettings(1000000, MSBFIRST, SPI_MODE0));
@@ -42,6 +45,7 @@ lora_message lorapacket_in_433, lorapacket_in_868da, lorapacket_in_868mg, lorapa
 lora_message lora_queue_out [NUMCHANNELS];
 
 volatile bool enableInterrupt433    = true;
+// These 868 states follow physical PCB radios, not runtime channels.
 volatile bool enableInterrupt868da  = true;
 volatile bool enableInterrupt868mg  = true;
 volatile bool enableInterrupt868lw  = true;
@@ -70,7 +74,197 @@ bool cadMode868da          = false;
 bool cadMode868mg          = false;
 bool cadMode868lw          = false;
 
+// Keep every 868 channel covered while rotating the DA antenna.
+static Lora868Route route868(CHANNEL868DA, CHANNEL868MG, CHANNEL868LW);
+static bool rotate868Pending = false;
+static bool cad868Pending = false;
+static bool send868Pending = false;
+
 SemaphoreHandle_t highlander = NULL;
+
+static int start_receive_868(Radio868 radio);
+
+static MY_SX1262 *get_radio868(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return &radio868da;
+  }
+  if (radio == Radio868::B)
+  {
+    return &radio868mg;
+  }
+
+  return &radio868lw;
+}
+
+static const char *get_radio868_name(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return "A";
+  }
+  if (radio == Radio868::B)
+  {
+    return "B";
+  }
+
+  return "C";
+}
+
+static int get_radio868_txen(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return RADIO868DATXEN;
+  }
+  if (radio == Radio868::B)
+  {
+    return RADIO868MGTXEN;
+  }
+
+  return RADIO868LWTXEN;
+}
+
+static int get_radio868_rxen(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return RADIO868DARXEN;
+  }
+  if (radio == Radio868::B)
+  {
+    return RADIO868MGRXEN;
+  }
+
+  return RADIO868LWRXEN;
+}
+
+static bool has_radio868(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return hasRadio868da;
+  }
+  if (radio == Radio868::B)
+  {
+    return hasRadio868mg;
+  }
+
+  return hasRadio868lw;
+}
+
+static volatile bool &get_interrupt868(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return enableInterrupt868da;
+  }
+  if (radio == Radio868::B)
+  {
+    return enableInterrupt868mg;
+  }
+
+  return enableInterrupt868lw;
+}
+
+static volatile bool &get_send868(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return hasMsgToSend868da;
+  }
+  if (radio == Radio868::B)
+  {
+    return hasMsgToSend868mg;
+  }
+
+  return hasMsgToSend868lw;
+}
+
+static volatile bool &get_sending868(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return msgOnTheWay868da;
+  }
+  if (radio == Radio868::B)
+  {
+    return msgOnTheWay868mg;
+  }
+
+  return msgOnTheWay868lw;
+}
+
+static volatile bool &get_flag868(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return transmissionFlag868da;
+  }
+  if (radio == Radio868::B)
+  {
+    return transmissionFlag868mg;
+  }
+
+  return transmissionFlag868lw;
+}
+
+static int16_t &get_tx_state868(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return transmissionState868da;
+  }
+  if (radio == Radio868::B)
+  {
+    return transmissionState868mg;
+  }
+
+  return transmissionState868lw;
+}
+
+static int64_t &get_tx_start868(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return startOfTransmission868da;
+  }
+  if (radio == Radio868::B)
+  {
+    return startOfTransmission868mg;
+  }
+
+  return startOfTransmission868lw;
+}
+
+static bool &get_cad_mode868(Radio868 radio)
+{
+  if (radio == Radio868::A)
+  {
+    return cadMode868da;
+  }
+  if (radio == Radio868::B)
+  {
+    return cadMode868mg;
+  }
+
+  return cadMode868lw;
+}
+
+static lora_message *get_packet868(uint8_t channel)
+{
+  if (channel == CHANNEL868DA)
+  {
+    return &lorapacket_in_868da;
+  }
+  if (channel == CHANNEL868MG)
+  {
+    return &lorapacket_in_868mg;
+  }
+
+  return &lorapacket_in_868lw;
+}
 
 uint8_t radio868_random_byte(void)
 {
@@ -79,26 +273,26 @@ uint8_t radio868_random_byte(void)
 
 int start_receive_868da(void)
 {
-  digitalWrite(RADIO868DATXEN, LOW);
-  delay(1);
-  digitalWrite(RADIO868DARXEN, HIGH);
-  return radio868da.startReceive();
+  return start_receive(CHANNEL868DA);
 }
 
 int start_receive_868mg(void)
 {
-  digitalWrite(RADIO868MGTXEN, LOW);
-  delay(1);
-  digitalWrite(RADIO868MGRXEN, HIGH);
-  return radio868mg.startReceive();
+  return start_receive(CHANNEL868MG);
 }
 
 int start_receive_868lw(void)
 {
-  digitalWrite(RADIO868LWTXEN, LOW);
+  return start_receive(CHANNEL868LW);
+}
+
+static int start_receive_868(Radio868 radio)
+{
+  digitalWrite(get_radio868_txen(radio), LOW);
   delay(1);
-  digitalWrite(RADIO868LWRXEN, HIGH);
-  return radio868lw.startReceive();
+  digitalWrite(get_radio868_rxen(radio), HIGH);
+
+  return get_radio868(radio)->startReceive();
 }
 
 int start_receive_433(void)
@@ -111,81 +305,40 @@ int start_receive_433(void)
 
 int start_receive(uint8_t channel)
 {
-  if (channel == CHANNEL433) return start_receive_433();
-  else if (channel == CHANNEL868DA) return start_receive_868da();
-  else if (channel == CHANNEL868MG) return start_receive_868mg();
-  else if (channel == CHANNEL868LW) return start_receive_868lw();
-  else return -1;
+  if (channel == CHANNEL433)
+  {
+    return start_receive_433();
+  }
+
+  Radio868 radio = route868.radio(channel);
+  if (radio == Radio868::Count)
+  {
+    return RADIOLIB_ERR_INVALID_FREQUENCY;
+  }
+
+  return start_receive_868(radio);
 }
 
-int start_send_868da(const uint8_t* data, size_t len)
+static int start_send_868(Radio868 radio, uint8_t channel, const uint8_t* data, size_t len)
 {
-  digitalWrite(RADIO868DARXEN, LOW);
+  digitalWrite(get_radio868_rxen(radio), LOW);
   delay(1);
-  digitalWrite(RADIO868DATXEN, HIGH);
+  digitalWrite(get_radio868_txen(radio), HIGH);
   delay(1);
   if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
   {
-    int16_t rl_status = radio868da.startTransmit(data, len);
+    int16_t rl_status = get_radio868(radio)->startTransmit(data, len);
     if (rl_status != RADIOLIB_ERR_NONE)
     {
       serial_writeln("WARNING: RadioLib startTransmit() failed, resetting radio");
-      reset_radio(CHANNEL868DA);
-      rl_status = radio868da.startTransmit(data, len);
+      reset_radio(channel);
+      rl_status = get_radio868(radio)->startTransmit(data, len);
     }
     return rl_status;
   }
   else 
   {
-    serial_writeln("INFO: Send 868DA disabled");
-    return RADIOLIB_ERR_UNSUPPORTED;
-  }
-}
-
-int start_send_868mg(const uint8_t* data, size_t len)
-{
-  digitalWrite(RADIO868MGRXEN, LOW);
-  delay(1);
-  digitalWrite(RADIO868MGTXEN, HIGH);
-  delay(1);
-  if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
-  {
-    int16_t rl_status = radio868mg.startTransmit(data, len);
-    if (rl_status != RADIOLIB_ERR_NONE)
-    {
-      serial_writeln("WARNING: RadioLib startTransmit() failed, resetting radio");
-      reset_radio(CHANNEL868MG);
-      rl_status = radio868mg.startTransmit(data, len);
-    }
-    return rl_status;
-  }
-  else 
-  {
-    serial_writeln("INFO: Send 868MG disabled");
-    return RADIOLIB_ERR_UNSUPPORTED;
-  }
-}
-
-int start_send_868lw(const uint8_t* data, size_t len)
-{
-  digitalWrite(RADIO868LWRXEN, LOW);
-  delay(1);
-  digitalWrite(RADIO868LWTXEN, HIGH);
-  delay(1);
-  if (CFG.send_enabled && (CFG.rdcp_address != RDCP_UNCONFIGURED_DA_ADDRESS))
-  {
-    int16_t rl_status = radio868lw.startTransmit(data, len);
-    if (rl_status != RADIOLIB_ERR_NONE)
-    {
-      serial_writeln("WARNING: RadioLib startTransmit() failed, resetting radio");
-      reset_radio(CHANNEL868LW);
-      rl_status = radio868lw.startTransmit(data, len);
-    }
-    return rl_status;
-  }
-  else 
-  {
-    serial_writeln("INFO: Send 868LW disabled");
+    serial_writeln("INFO: Send 868 disabled");
     return RADIOLIB_ERR_UNSUPPORTED;
   }
 }
@@ -216,11 +369,18 @@ int16_t start_send_433(const uint8_t* data, size_t len)
 
 int16_t start_send(uint8_t channel, const uint8_t* data, size_t len)
 {
-  if (channel == CHANNEL433) return start_send_433(data, len);
-  else if (channel == CHANNEL868DA) return start_send_868da(data, len);
-  else if (channel == CHANNEL868MG) return start_send_868mg(data, len);
-  else if (channel == CHANNEL868LW) return start_send_868lw(data, len);
-  else return -1;
+  if (channel == CHANNEL433)
+  {
+    return start_send_433(data, len);
+  }
+
+  Radio868 radio = route868.radio(channel);
+  if (radio == Radio868::Count)
+  {
+    return RADIOLIB_ERR_INVALID_FREQUENCY;
+  }
+
+  return start_send_868(radio, channel, data, len);
 }
 
 void setup_lora_hardware(void)
@@ -321,21 +481,19 @@ void reset_radio(int channel)
     radio433.reset();
     radio433.begin(); 
   }
-  if ((channel == CHANNEL868DA) || (channel == ALL_CHANNELS))
+
+  for (uint8_t i = 0; i < static_cast<uint8_t>(Radio868::Count); i++)
   {
-    radio868da.reset();
-    radio868da.begin(); 
+    Radio868 radio = static_cast<Radio868>(i);
+    if ((route868.channel(radio) != channel) && (channel != ALL_CHANNELS))
+    {
+      continue;
+    }
+
+    get_radio868(radio)->reset();
+    get_radio868(radio)->begin();
   }
-  if ((channel == CHANNEL868MG) || (channel == ALL_CHANNELS))
-  {
-    radio868mg.reset();
-    radio868mg.begin(); 
-  }
-  if ((channel == CHANNEL868LW) || (channel == ALL_CHANNELS))
-  {
-    radio868lw.reset();
-    radio868lw.begin(); 
-  }
+
   setup_radio(channel);
   return;
 }
@@ -417,6 +575,103 @@ void setFlag868lw(void)
   return;
 }
 
+static bool config_radio868(Radio868 radio, uint8_t channel)
+{
+  MY_SX1262 *device = get_radio868(radio);
+  lora_channel_config *config = &CFG.lora[channel];
+
+  if (device->setFrequency(config->freq) == RADIOLIB_ERR_INVALID_FREQUENCY)
+  {
+    serial_writeln("ERROR: Selected frequency is invalid for this LoRa 868 module!");
+    return false;
+  }
+  if (device->setBandwidth(config->bw) == RADIOLIB_ERR_INVALID_BANDWIDTH)
+  {
+    serial_writeln("ERROR: Selected bandwidth is invalid for this LoRa 868 module!");
+    return false;
+  }
+  if (device->setSpreadingFactor(config->sf) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR)
+  {
+    serial_writeln("ERROR: Selected spreading factor is invalid for this LoRa 868 module!");
+    return false;
+  }
+  if (device->setCodingRate(config->cr) == RADIOLIB_ERR_INVALID_CODING_RATE)
+  {
+    serial_writeln("ERROR: Selected coding rate is invalid for this LoRa 868 module!");
+    return false;
+  }
+  if (device->setSyncWord(config->sw) != RADIOLIB_ERR_NONE)
+  {
+    serial_writeln("ERROR: Unable to set LoRa sync word 868!");
+    return false;
+  }
+  if (device->setOutputPower(config->pw) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
+  {
+    serial_writeln("ERROR: Selected output power is invalid for this LoRa 868 module!");
+    return false;
+  }
+  if (device->setCurrentLimit(RADIO_CURRENT_LIMIT_MA) == RADIOLIB_ERR_INVALID_CURRENT_LIMIT)
+  {
+    serial_writeln("ERROR: Selected current limit is invalid for this LoRa 868 module!");
+    return false;
+  }
+  if (device->setPreambleLength(config->pl) == RADIOLIB_ERR_INVALID_PREAMBLE_LENGTH)
+  {
+    serial_writeln("ERROR: Selected preamble length is invalid for this LoRa 868 module!");
+    return false;
+  }
+  if (device->setCRC(false) == RADIOLIB_ERR_INVALID_CRC_CONFIGURATION)
+  {
+    serial_writeln("ERROR: Selected CRC mode is invalid for this LoRa 868 module!");
+    return false;
+  }
+
+  if (radio == Radio868::A)
+  {
+    device->setDio1Action(setFlag868da);
+  }
+  else if (radio == Radio868::B)
+  {
+    device->setDio1Action(setFlag868mg);
+  }
+  else
+  {
+    device->setDio1Action(setFlag868lw);
+  }
+
+  return true;
+}
+
+static bool setup_radio868(Radio868 radio, uint8_t channel)
+{
+  if (!config_radio868(radio, channel))
+  {
+    return false;
+  }
+
+  if (xSemaphoreTake(highlander, portMAX_DELAY) != pdTRUE)
+  {
+    return false;
+  }
+
+  int state = start_receive_868(radio);
+  xSemaphoreGive(highlander);
+
+  char info[INFOLEN];
+  if (state == RADIOLIB_ERR_NONE)
+  {
+    snprintf(info, INFOLEN, "INIT: LoRa 868 radio %s configured for channel %u.",
+      get_radio868_name(radio), channel);
+    serial_writeln(info);
+    return true;
+  }
+
+  snprintf(info, INFOLEN, "ERROR: LoRa 868 radio %s setup failed, code %d",
+    get_radio868_name(radio), state);
+  serial_writeln(info);
+  return false;
+}
+
 bool setup_radio(int channel)
 {
   if (highlander == NULL) highlander = xSemaphoreCreateBinary();
@@ -455,7 +710,7 @@ bool setup_radio(int channel)
       serial_writeln("ERROR: Selected output power is invalid for this LoRa 433 module!");
       return false;
     }
-    if (radio433.setCurrentLimit(140) == RADIOLIB_ERR_INVALID_CURRENT_LIMIT)
+    if (radio433.setCurrentLimit(RADIO_CURRENT_LIMIT_MA) == RADIOLIB_ERR_INVALID_CURRENT_LIMIT)
     {
       serial_writeln("ERROR: Selected current limit is invalid for this LoRa 433 module!");
       return false;
@@ -491,211 +746,273 @@ bool setup_radio(int channel)
     }
   }
 
-  if ((hasRadio868da) && ((channel==CHANNEL868DA) || (channel==ALL_CHANNELS)))
+  for (uint8_t i = 0; i < static_cast<uint8_t>(Radio868::Count); i++)
   {
-    if (radio868da.setFrequency(CFG.lora[CHANNEL868DA].freq) == RADIOLIB_ERR_INVALID_FREQUENCY)
-    {
-      serial_writeln("ERROR: Selected frequency is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868da.setBandwidth(CFG.lora[CHANNEL868DA].bw) == RADIOLIB_ERR_INVALID_BANDWIDTH)
-    {
-      serial_writeln("ERROR: Selected bandwidth is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868da.setSpreadingFactor(CFG.lora[CHANNEL868DA].sf) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR)
-    {
-      serial_writeln("ERROR: Selected spreading factor is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868da.setCodingRate(CFG.lora[CHANNEL868DA].cr) == RADIOLIB_ERR_INVALID_CODING_RATE)
-    {
-      serial_writeln("ERROR: Selected coding rate is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868da.setSyncWord(CFG.lora[CHANNEL868DA].sw) != RADIOLIB_ERR_NONE)
-    {
-      serial_writeln("ERROR: Unable to set LoRa sync word 868 DA!");
-      return false;
-    }
-    if (radio868da.setOutputPower(CFG.lora[CHANNEL868DA].pw) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
-    {
-      serial_writeln("ERROR: Selected output power is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868da.setCurrentLimit(140) == RADIOLIB_ERR_INVALID_CURRENT_LIMIT)
-    {
-      serial_writeln("ERROR: Selected current limit is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868da.setPreambleLength(CFG.lora[CHANNEL868DA].pl) == RADIOLIB_ERR_INVALID_PREAMBLE_LENGTH)
-    {
-      serial_writeln("ERROR: Selected preamble length is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868da.setCRC(false) == RADIOLIB_ERR_INVALID_CRC_CONFIGURATION)
-    {
-      serial_writeln("ERROR: Selected CRC mode is invalid for this LoRa 868 module!");
-      return false;
-    }
+    Radio868 radio = static_cast<Radio868>(i);
+    uint8_t assigned_channel = route868.channel(radio);
 
-    radio868da.setDio1Action(setFlag868da);
-
-    if (xSemaphoreTake(highlander, portMAX_DELAY) == pdTRUE)
+    if (!has_radio868(radio))
     {
-      if (hasRadio868da)
-      {
-        int state = start_receive_868da();
-        if (state == RADIOLIB_ERR_NONE)
-        {
-          serial_writeln("INIT: LoRa 868 DA parameters applied successfully.");
-        }
-        else
-        {
-          serial_writeln("ERROR: LoRa 868 DA parameters setup failed, code " + String(state));
-        }
-      }
-      xSemaphoreGive(highlander);
+      continue;
+    }
+    if ((channel != assigned_channel) && (channel != ALL_CHANNELS))
+    {
+      continue;
+    }
+    if (!setup_radio868(radio, assigned_channel))
+    {
+      return false;
     }
   }
-
-  if ((hasRadio868mg) && ((channel==CHANNEL868MG) || (channel==ALL_CHANNELS)))
-  {
-    if (radio868mg.setFrequency(CFG.lora[CHANNEL868MG].freq) == RADIOLIB_ERR_INVALID_FREQUENCY)
-    {
-      serial_writeln("ERROR: Selected frequency is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868mg.setBandwidth(CFG.lora[CHANNEL868MG].bw) == RADIOLIB_ERR_INVALID_BANDWIDTH)
-    {
-      serial_writeln("ERROR: Selected bandwidth is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868mg.setSpreadingFactor(CFG.lora[CHANNEL868MG].sf) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR)
-    {
-      serial_writeln("ERROR: Selected spreading factor is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868mg.setCodingRate(CFG.lora[CHANNEL868MG].cr) == RADIOLIB_ERR_INVALID_CODING_RATE)
-    {
-      serial_writeln("ERROR: Selected coding rate is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868mg.setSyncWord(CFG.lora[CHANNEL868MG].sw) != RADIOLIB_ERR_NONE)
-    {
-      serial_writeln("ERROR: Unable to set LoRa sync word 868 MG!");
-      return false;
-    }
-    if (radio868mg.setOutputPower(CFG.lora[CHANNEL868MG].pw) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
-    {
-      serial_writeln("ERROR: Selected output power is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868mg.setCurrentLimit(140) == RADIOLIB_ERR_INVALID_CURRENT_LIMIT)
-    {
-      serial_writeln("ERROR: Selected current limit is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868mg.setPreambleLength(CFG.lora[CHANNEL868MG].pl) == RADIOLIB_ERR_INVALID_PREAMBLE_LENGTH)
-    {
-      serial_writeln("ERROR: Selected preamble length is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868mg.setCRC(false) == RADIOLIB_ERR_INVALID_CRC_CONFIGURATION)
-    {
-      serial_writeln("ERROR: Selected CRC mode is invalid for this LoRa 868 module!");
-      return false;
-    }
-
-    radio868mg.setDio1Action(setFlag868mg);
-
-    if (xSemaphoreTake(highlander, portMAX_DELAY) == pdTRUE)
-    {
-      if (hasRadio868mg)
-      {
-        int state = start_receive_868mg();
-        if (state == RADIOLIB_ERR_NONE)
-        {
-          serial_writeln("INIT: LoRa 868 MG parameters applied successfully.");
-        }
-        else
-        {
-          serial_writeln("ERROR: LoRa 868 MG parameters setup failed, code " + String(state));
-        }
-      }
-      xSemaphoreGive(highlander);
-    }
-  }
-
-  if ((hasRadio868lw) && ((channel==CHANNEL868LW) || (channel==ALL_CHANNELS)))
-  {
-    if (radio868lw.setFrequency(CFG.lora[CHANNEL868LW].freq) == RADIOLIB_ERR_INVALID_FREQUENCY)
-    {
-      serial_writeln("ERROR: Selected frequency is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868lw.setBandwidth(CFG.lora[CHANNEL868LW].bw) == RADIOLIB_ERR_INVALID_BANDWIDTH)
-    {
-      serial_writeln("ERROR: Selected bandwidth is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868lw.setSpreadingFactor(CFG.lora[CHANNEL868LW].sf) == RADIOLIB_ERR_INVALID_SPREADING_FACTOR)
-    {
-      serial_writeln("ERROR: Selected spreading factor is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868lw.setCodingRate(CFG.lora[CHANNEL868LW].cr) == RADIOLIB_ERR_INVALID_CODING_RATE)
-    {
-      serial_writeln("ERROR: Selected coding rate is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868lw.setSyncWord(CFG.lora[CHANNEL868LW].sw) != RADIOLIB_ERR_NONE)
-    {
-      serial_writeln("ERROR: Unable to set LoRa sync word 868 LW!");
-      return false;
-    }
-    if (radio868lw.setOutputPower(CFG.lora[CHANNEL868LW].pw) == RADIOLIB_ERR_INVALID_OUTPUT_POWER)
-    {
-      serial_writeln("ERROR: Selected output power is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868lw.setCurrentLimit(140) == RADIOLIB_ERR_INVALID_CURRENT_LIMIT)
-    {
-      serial_writeln("ERROR: Selected current limit is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868lw.setPreambleLength(CFG.lora[CHANNEL868LW].pl) == RADIOLIB_ERR_INVALID_PREAMBLE_LENGTH)
-    {
-      serial_writeln("ERROR: Selected preamble length is invalid for this LoRa 868 module!");
-      return false;
-    }
-    if (radio868lw.setCRC(false) == RADIOLIB_ERR_INVALID_CRC_CONFIGURATION)
-    {
-      serial_writeln("ERROR: Selected CRC mode is invalid for this LoRa 868 module!");
-      return false;
-    }
-
-    radio868lw.setDio1Action(setFlag868lw);
-
-    if (xSemaphoreTake(highlander, portMAX_DELAY) == pdTRUE)
-    {
-      if (hasRadio868lw)
-      {
-        int state = start_receive_868lw();
-        if (state == RADIOLIB_ERR_NONE)
-        {
-          serial_writeln("INIT: LoRa 868 LW parameters applied successfully.");
-        }
-        else
-        {
-          serial_writeln("ERROR: LoRa 868 LW parameters setup failed, code " + String(state));
-        }
-      }
-      xSemaphoreGive(highlander);
-    }
-  }
-
   return true;
+}
+
+static void queue_send868(uint8_t channel)
+{
+  Radio868 radio = route868.radio(channel);
+  if (radio == Radio868::Count)
+  {
+    return;
+  }
+
+  get_send868(radio) = true;
+}
+
+static void start_cad868(uint8_t channel)
+{
+  Radio868 radio = route868.radio(channel);
+  if (radio == Radio868::Count)
+  {
+    return;
+  }
+
+  get_cad_mode868(radio) = true;
+  digitalWrite(get_radio868_txen(radio), LOW);
+  delay(1);
+  digitalWrite(get_radio868_rxen(radio), HIGH);
+  get_radio868(radio)->startChannelScan();
+}
+
+static void resume_868_requests(void)
+{
+  if (cad868Pending)
+  {
+    cad868Pending = false;
+    start_cad868(CHANNEL868DA);
+  }
+
+  if (send868Pending)
+  {
+    send868Pending = false;
+    queue_send868(CHANNEL868DA);
+  }
+}
+
+static void rotate_radio868(void)
+{
+  if (!rotate868Pending)
+  {
+    return;
+  }
+  if (!hasRadio868da || !hasRadio868mg || !hasRadio868lw)
+  {
+    rotate868Pending = false;
+    resume_868_requests();
+    return;
+  }
+
+  Radio868 current = route868.da_radio();
+  Radio868 next = route868.next_da_radio();
+  if (get_flag868(current) || get_flag868(next) ||
+      get_send868(current) || get_send868(next) ||
+      get_sending868(current) || get_sending868(next) ||
+      get_cad_mode868(current) || get_cad_mode868(next))
+  {
+    return;
+  }
+
+  get_interrupt868(current) = false;
+  get_interrupt868(next) = false;
+
+  if (get_flag868(current) || get_flag868(next))
+  {
+    get_interrupt868(current) = true;
+    get_interrupt868(next) = true;
+    return;
+  }
+
+  uint8_t displaced_channel = route868.channel(next);
+  bool current_ok = config_radio868(current, displaced_channel);
+  bool next_ok = current_ok && config_radio868(next, CHANNEL868DA);
+  bool receive_ok = false;
+
+  if (current_ok && next_ok)
+  {
+    int current_state = start_receive_868(current);
+    int next_state = start_receive_868(next);
+    receive_ok = (current_state == RADIOLIB_ERR_NONE) &&
+                 (next_state == RADIOLIB_ERR_NONE);
+  }
+
+  if (current_ok && next_ok && receive_ok)
+  {
+    route868.rotate_da();
+
+    char info[INFOLEN];
+    snprintf(info, INFOLEN, "INFO: 868DA moved from radio %s to radio %s",
+      get_radio868_name(current), get_radio868_name(next));
+    serial_writeln(info);
+  }
+  else
+  {
+    // Restore the last complete mapping after a partial reconfiguration.
+    config_radio868(current, CHANNEL868DA);
+    config_radio868(next, displaced_channel);
+    start_receive_868(current);
+    start_receive_868(next);
+    serial_writeln("ERROR: 868 radio rotation failed; previous mapping restored");
+  }
+
+  get_flag868(current) = false;
+  get_flag868(next) = false;
+  get_interrupt868(current) = true;
+  get_interrupt868(next) = true;
+
+  rotate868Pending = false;
+  resume_868_requests();
+}
+
+static void loop_radio868(Radio868 radio)
+{
+  uint8_t channel = route868.channel(radio);
+  volatile bool &has_message = get_send868(radio);
+  volatile bool &is_sending = get_sending868(radio);
+  volatile bool &event_flag = get_flag868(radio);
+  volatile bool &interrupt_enabled = get_interrupt868(radio);
+  int16_t &tx_state = get_tx_state868(radio);
+  int64_t &tx_started = get_tx_start868(radio);
+  MY_SX1262 *device = get_radio868(radio);
+  char info[INFOLEN];
+
+  if (has_message)
+  {
+    cpu_fast();
+    if (is_sending && event_flag)
+    {
+      interrupt_enabled = false;
+      event_flag = false;
+
+      if (tx_state == RADIOLIB_ERR_NONE)
+      {
+        snprintf(info, INFOLEN, "INFO: LoRa channel %u transmission on radio %s finished",
+          channel, get_radio868_name(radio));
+        serial_writeln(info);
+        snprintf(info, INFOLEN, "INFO: TX%u wallclock time was %" PRId64 " ms",
+          channel, my_millis() - tx_started);
+        serial_writeln(info);
+      }
+      else
+      {
+        snprintf(info, INFOLEN, "ERROR: LoRa channel %u transmission failed, code %d",
+          channel, tx_state);
+        serial_writeln(info);
+      }
+
+      has_message = false;
+      is_sending = false;
+      start_receive_868(radio);
+      interrupt_enabled = true;
+      rdcp_callback_txfin(channel);
+
+      if (channel == CHANNEL868DA)
+      {
+        rotate868Pending = true;
+      }
+      return;
+    }
+    if (is_sending)
+    {
+      return;
+    }
+
+    snprintf(info, INFOLEN, "INFO: Transmitting LoRa channel %u on radio %s, length %u bytes",
+      channel, get_radio868_name(radio), lora_queue_out[channel].payload_length);
+    serial_writeln(info);
+
+    tx_started = my_millis();
+    tx_state = start_send_868(radio, channel, lora_queue_out[channel].payload,
+      lora_queue_out[channel].payload_length);
+    if (tx_state == RADIOLIB_ERR_NONE)
+    {
+      is_sending = true;
+    }
+    interrupt_enabled = true;
+    return;
+  }
+  if (!event_flag)
+  {
+    return;
+  }
+
+  cpu_fast();
+  interrupt_enabled = false;
+  event_flag = false;
+
+  if (get_cad_mode868(radio))
+  {
+    get_cad_mode868(radio) = false;
+    int cad_state = device->getChannelScanResult();
+    start_receive_868(radio);
+    interrupt_enabled = true;
+    rdcp_callback_cad(channel, cad_state == RADIOLIB_LORA_DETECTED);
+    return;
+  }
+
+  byte payload[300];
+  int payload_length = device->getPacketLength();
+  if (payload_length > RDCP_MAX_LORA_PAYLOAD_SIZE)
+  {
+    payload_length = RDCP_MAX_LORA_PAYLOAD_SIZE;
+  }
+  int state = device->readData(payload, payload_length);
+
+  if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))
+  {
+    if (payload_length > 0)
+    {
+      lora_message *packet = get_packet868(channel);
+      packet->available = true;
+      packet->channel = channel;
+      packet->rssi = device->getRSSI();
+      packet->snr = device->getSNR();
+      packet->timestamp = my_millis();
+      packet->payload_length = payload_length;
+      memcpy(packet->payload, payload, payload_length);
+
+      snprintf(info, INFOLEN, "INFO: LoRa channel %u radio %s received packet",
+        channel, get_radio868_name(radio));
+      serial_writeln(info);
+      snprintf(info, INFOLEN, "RXMETA %u %.2f %.2f %.3f",
+        packet->payload_length, packet->rssi, packet->snr, CFG.lora[channel].freq);
+      serial_writeln(info);
+      serial_write_incoming_message(channel);
+    }
+    else
+    {
+      snprintf(info, INFOLEN, "INFO: LoRa channel %u radio %s received empty packet",
+        channel, get_radio868_name(radio));
+      serial_writeln(info);
+    }
+  }
+  else
+  {
+    snprintf(info, INFOLEN, "ERROR: LoRa channel %u radio %s receive failed, code %d",
+      channel, get_radio868_name(radio), state);
+    serial_writeln(info);
+  }
+
+  start_receive_868(radio);
+  interrupt_enabled = true;
 }
 
 void loop_radio(void)
@@ -818,326 +1135,10 @@ void loop_radio(void)
       }
     }
 
-    if (hasMsgToSend868da)
-    {
-      cpu_fast();
-      if (msgOnTheWay868da)
-      {
-        if (transmissionFlag868da)
-        {
-          enableInterrupt868da = false;
-          transmissionFlag868da = false;
-
-          if (transmissionState868da == RADIOLIB_ERR_NONE)
-          {
-            serial_writeln("INFO: LoRa 868 DA transmission successfully finished!");
-            snprintf(info, INFOLEN, "INFO: TX868DA wallclock time was %" PRId64 " ms", my_millis() - startOfTransmission868da);
-            serial_writeln(info);
-          }
-          else
-          {
-            snprintf(info, INFOLEN, "ERROR: LoRa 868 DA transmission failed, code %d", transmissionState868da);
-            serial_writeln(info);
-          }
-
-          hasMsgToSend868da = false;
-          msgOnTheWay868da = false;
-          start_receive_868da();
-          enableInterrupt868da = true;
-          rdcp_callback_txfin(CHANNEL868DA);
-        }
-      }
-      else
-      {
-        snprintf(info, INFOLEN, "INFO: Transmitting LoRa 868 DA message, length %d bytes", lora_queue_out[CHANNEL868DA].payload_length);
-        serial_writeln(info);
-
-        startOfTransmission868da = my_millis();
-        transmissionState868da = start_send_868da(lora_queue_out[CHANNEL868DA].payload, lora_queue_out[CHANNEL868DA].payload_length);
-        if (transmissionState868da == RADIOLIB_ERR_NONE) msgOnTheWay868da = true;
-        enableInterrupt868da = true;
-      }
-    }
-    else
-    {
-      String recv;
-
-      if (transmissionFlag868da)
-      {
-        cpu_fast();
-        enableInterrupt868da = false;
-        transmissionFlag868da = false;
-
-        if (cadMode868da)
-        {
-          cadMode868da = false;
-          int cState = radio868da.getChannelScanResult();
-          radio868da.startReceive(); // immediately go into receive mode, no TXEN/RXEN switch needed
-          enableInterrupt868da = true;
-          if (cState == RADIOLIB_LORA_DETECTED)
-          {
-            rdcp_callback_cad(CHANNEL868DA, true);
-          }
-          else 
-          {
-            rdcp_callback_cad(CHANNEL868DA, false);
-          }
-        }
-        else 
-        {
-          byte byteArr[300];
-          int numBytes = radio868da.getPacketLength();
-          if (numBytes > 200) numBytes = 200;
-          int state = radio868da.readData(byteArr, numBytes);
-
-          if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))
-          {
-            if (numBytes > 0)
-            {
-              serial_writeln("INFO: LoRa 868 DA Radio received packet.");
-              lorapacket_in_868da.available = true; 
-              lorapacket_in_868da.channel = CHANNEL868DA;
-              lorapacket_in_868da.rssi = radio868da.getRSSI();
-              lorapacket_in_868da.snr = radio868da.getSNR();
-              lorapacket_in_868da.timestamp = my_millis();
-              lorapacket_in_868da.payload_length = numBytes;
-              for (int i=0; i != numBytes; i++) lorapacket_in_868da.payload[i] = byteArr[i];
-
-              snprintf(info, INFOLEN, "RXMETA %d %.2f %.2f %.3f", 
-                lorapacket_in_868da.payload_length, lorapacket_in_868da.rssi, 
-                lorapacket_in_868da.snr, CFG.lora[CHANNEL868DA].freq);
-              serial_writeln(info);
-              serial_write_incoming_message(CHANNEL868DA);
-            }
-            else
-            {
-              serial_writeln("INFO: LoRa 868 DA Radio received empty packet.");
-            }
-          }
-          else
-          {
-            snprintf(info, INFOLEN, "ERROR: LoRa 868 DA packet receiving failed, code %d", state);
-            serial_writeln(info);
-          }
-          start_receive_868da();
-          enableInterrupt868da = true;
-        }
-      }
-    }
-
-    if (hasMsgToSend868mg)
-    {
-      cpu_fast();
-      if (msgOnTheWay868mg)
-      {
-        if (transmissionFlag868mg)
-        {
-          enableInterrupt868mg = false;
-          transmissionFlag868mg = false;
-
-          if (transmissionState868mg == RADIOLIB_ERR_NONE)
-          {
-            serial_writeln("INFO: LoRa 868 MG transmission successfully finished!");
-            snprintf(info, INFOLEN, "INFO: TX868MG wallclock time was %" PRId64 " ms", my_millis() - startOfTransmission868mg);
-            serial_writeln(info);
-          }
-          else
-          {
-            snprintf(info, INFOLEN, "ERROR: LoRa 868 MG transmission failed, code %d", transmissionState868mg);
-            serial_writeln(info);
-          }
-
-          hasMsgToSend868mg = false;
-          msgOnTheWay868mg = false;
-          start_receive_868mg();
-          enableInterrupt868mg = true;
-          rdcp_callback_txfin(CHANNEL868MG);
-        }
-      }
-      else
-      {
-        snprintf(info, INFOLEN, "INFO: Transmitting LoRa 868 MG message, length %d bytes", lora_queue_out[CHANNEL868MG].payload_length);
-        serial_writeln(info);
-
-        startOfTransmission868mg = my_millis();
-        transmissionState868mg = start_send_868mg(lora_queue_out[CHANNEL868MG].payload, lora_queue_out[CHANNEL868MG].payload_length);
-        if (transmissionState868mg == RADIOLIB_ERR_NONE) msgOnTheWay868mg = true;
-        enableInterrupt868mg = true;
-      }
-    }
-    else
-    {
-      String recv;
-
-      if (transmissionFlag868mg)
-      {
-        cpu_fast();
-        enableInterrupt868mg = false;
-        transmissionFlag868mg = false;
-
-        if (cadMode868mg)
-        {
-          cadMode868mg = false;
-          int cState = radio868mg.getChannelScanResult();
-          radio868mg.startReceive(); // immediately go into receive mode, no TXEN/RXEN switch needed
-          enableInterrupt868mg = true;
-          if (cState == RADIOLIB_LORA_DETECTED)
-          {
-            rdcp_callback_cad(CHANNEL868MG, true);
-          }
-          else 
-          {
-            rdcp_callback_cad(CHANNEL868MG, false);
-          }
-        }
-        else 
-        {
-          byte byteArr[300];
-          int numBytes = radio868mg.getPacketLength();
-          if (numBytes > RDCP_MAX_LORA_PAYLOAD_SIZE) numBytes = RDCP_MAX_LORA_PAYLOAD_SIZE;
-          int state = radio868mg.readData(byteArr, numBytes);
-
-          if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))
-          {
-            if (numBytes > 0)
-            {
-              serial_writeln("INFO: LoRa 868 MG Radio received packet.");
-              lorapacket_in_868mg.available = true; 
-              lorapacket_in_868mg.channel = CHANNEL868MG;
-              lorapacket_in_868mg.rssi = radio868mg.getRSSI();
-              lorapacket_in_868mg.snr = radio868mg.getSNR();
-              lorapacket_in_868mg.timestamp = my_millis();
-              lorapacket_in_868mg.payload_length = numBytes;
-              for (int i=0; i != numBytes; i++) lorapacket_in_868mg.payload[i] = byteArr[i];
-
-              snprintf(info, INFOLEN, "RXMETA %d %.2f %.2f %.3f", 
-                lorapacket_in_868mg.payload_length, lorapacket_in_868mg.rssi, 
-                lorapacket_in_868mg.snr, CFG.lora[CHANNEL868MG].freq);
-              serial_writeln(info);
-              serial_write_incoming_message(CHANNEL868MG);
-            }
-            else
-            {
-              serial_writeln("INFO: LoRa 868 MG Radio received empty packet.");
-            }
-          }
-          else
-          {
-            snprintf(info, INFOLEN, "ERROR: LoRa 868 MG packet receiving failed, code %d", state);
-            serial_writeln(info);
-          }
-          start_receive_868mg();
-          enableInterrupt868mg = true;
-        }
-      }
-    }
-
-    if (hasMsgToSend868lw)
-    {
-      cpu_fast();
-      if (msgOnTheWay868lw)
-      {
-        if (transmissionFlag868lw)
-        {
-          enableInterrupt868lw = false;
-          transmissionFlag868lw = false;
-
-          if (transmissionState868lw == RADIOLIB_ERR_NONE)
-          {
-            serial_writeln("INFO: LoRa 868 LW transmission successfully finished!");
-            snprintf(info, INFOLEN, "INFO: TX868LW wallclock time was %" PRId64 " ms", my_millis() - startOfTransmission868lw);
-            serial_writeln(info);
-          }
-          else
-          {
-            snprintf(info, INFOLEN, "ERROR: LoRa 868 LW transmission failed, code %d", transmissionState868lw);
-            serial_writeln(info);
-          }
-
-          hasMsgToSend868lw = false;
-          msgOnTheWay868lw = false;
-          start_receive_868lw();
-          enableInterrupt868lw = true;
-          rdcp_callback_txfin(CHANNEL868LW);
-        }
-      }
-      else
-      {
-        snprintf(info, INFOLEN, "INFO: Transmitting LoRa 868 LW message, length %d bytes", lora_queue_out[CHANNEL868LW].payload_length);
-        serial_writeln(info);
-
-        startOfTransmission868lw = my_millis();
-        transmissionState868lw = start_send_868lw(lora_queue_out[CHANNEL868LW].payload, lora_queue_out[CHANNEL868LW].payload_length);
-        if (transmissionState868lw == RADIOLIB_ERR_NONE) msgOnTheWay868lw = true;
-        enableInterrupt868lw = true;
-      }
-    }
-    else
-    {
-      String recv;
-
-      if (transmissionFlag868lw)
-      {
-        cpu_fast();
-        enableInterrupt868lw = false;
-        transmissionFlag868lw = false;
-
-        if (cadMode868lw)
-        {
-          cadMode868lw = false;
-          int cState = radio868lw.getChannelScanResult();
-          radio868lw.startReceive(); // immediately go into receive mode, no TXEN/RXEN switch needed
-          enableInterrupt868lw = true;
-          if (cState == RADIOLIB_LORA_DETECTED)
-          {
-            rdcp_callback_cad(CHANNEL868LW, true);
-          }
-          else 
-          {
-            rdcp_callback_cad(CHANNEL868LW, false);
-          }
-        }
-        else 
-        {
-          byte byteArr[300];
-          int numBytes = radio868lw.getPacketLength();
-          if (numBytes > RDCP_MAX_LORA_PAYLOAD_SIZE) numBytes = RDCP_MAX_LORA_PAYLOAD_SIZE;
-          int state = radio868lw.readData(byteArr, numBytes);
-
-          if ((state == RADIOLIB_ERR_NONE) || (state == RADIOLIB_ERR_CRC_MISMATCH))
-          {
-            if (numBytes > 0)
-            {
-              serial_writeln("INFO: LoRa 868 LW Radio received packet.");
-              lorapacket_in_868lw.available = true; 
-              lorapacket_in_868lw.channel = CHANNEL868LW;
-              lorapacket_in_868lw.rssi = radio868lw.getRSSI();
-              lorapacket_in_868lw.snr = radio868lw.getSNR();
-              lorapacket_in_868lw.timestamp = my_millis();
-              lorapacket_in_868lw.payload_length = numBytes;
-              for (int i=0; i != numBytes; i++) lorapacket_in_868lw.payload[i] = byteArr[i];
-
-              snprintf(info, INFOLEN, "RXMETA %d %.2f %.2f %.3f", 
-                lorapacket_in_868lw.payload_length, lorapacket_in_868lw.rssi, 
-                lorapacket_in_868lw.snr, CFG.lora[CHANNEL868LW].freq);
-              serial_writeln(info);
-              serial_write_incoming_message(CHANNEL868LW);
-            }
-            else
-            {
-              serial_writeln("INFO: LoRa 868 LW Radio received empty packet.");
-            }
-          }
-          else
-          {
-            snprintf(info, INFOLEN, "ERROR: LoRa 868 LW packet receiving failed, code %d", state);
-            serial_writeln(info);
-          }
-          start_receive_868lw();
-          enableInterrupt868lw = true;
-        }
-      }
-    }
+    loop_radio868(Radio868::A);
+    loop_radio868(Radio868::B);
+    loop_radio868(Radio868::C);
+    rotate_radio868();
 
     xSemaphoreGive(highlander);
   }
@@ -1145,32 +1146,35 @@ void loop_radio(void)
 
 void send_lora_message_binary(int channel, uint8_t *payload, uint8_t length)
 {
-  if (length == 0) return;
+  if (length == 0)
+  {
+    return;
+  }
   if (length > RDCP_MAX_LORA_PAYLOAD_SIZE)
   {
     serial_writeln("ERROR: Cannot send LoRa message, payload length exceeds maximum size");
     return;
   }
+  if ((channel < CHANNEL433) || (channel >= NUMCHANNELS))
+  {
+    serial_writeln("ERROR: Cannot send LoRa message on invalid channel");
+    return;
+  }
 
-  for (int i=0; i != length; i++) { lora_queue_out[channel].payload[i] = payload[i]; }
+  memcpy(lora_queue_out[channel].payload, payload, length);
   lora_queue_out[channel].payload_length = length;
   if (channel == CHANNEL433)
   {
     hasMsgToSend433 = true;
+    return;
   }
-  else if (channel == CHANNEL868DA) 
+  if ((channel == CHANNEL868DA) && rotate868Pending)
   {
-    hasMsgToSend868da = true;
+    send868Pending = true;
+    return;
   }
-  else if (channel == CHANNEL868MG) 
-  {
-    hasMsgToSend868mg = true;
-  }
-  else if (channel == CHANNEL868LW) 
-  {
-    hasMsgToSend868lw = true;
-  }
-  return;
+
+  queue_send868(channel);
 }
 
 void radio_start_cad(uint8_t channel)
@@ -1182,32 +1186,15 @@ void radio_start_cad(uint8_t channel)
     delay(1);
     digitalWrite(RADIO433RXEN, HIGH);
     radio433.startChannelScan();
+    return;
   }
-  else if (channel == CHANNEL868DA)
+  if ((channel == CHANNEL868DA) && rotate868Pending)
   {
-    cadMode868da = true;
-    digitalWrite(RADIO868DATXEN, LOW);
-    delay(1);
-    digitalWrite(RADIO868DARXEN, HIGH);
-    radio868da.startChannelScan();
+    cad868Pending = true;
+    return;
   }
-  else if (channel == CHANNEL868MG)
-  {
-    cadMode868mg = true;
-    digitalWrite(RADIO868MGTXEN, LOW);
-    delay(1);
-    digitalWrite(RADIO868MGRXEN, HIGH);
-    radio868mg.startChannelScan();
-  }
-  else if (channel == CHANNEL868LW)
-  {
-    cadMode868lw = true;
-    digitalWrite(RADIO868LWTXEN, LOW);
-    delay(1);
-    digitalWrite(RADIO868LWRXEN, HIGH);
-    radio868lw.startChannelScan();
-  }
-  return;
+
+  start_cad868(channel);
 }
 
 /* EOF */

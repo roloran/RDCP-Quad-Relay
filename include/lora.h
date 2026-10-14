@@ -196,7 +196,7 @@ int start_receive_868lw(void);
 int start_receive(uint8_t channel);
 
 /**
- * Get a random byte from the 868 MHz DA LoRa radio via RadioLib.
+ * Get a random byte from an 868 MHz LoRa radio via RadioLib.
  */
 uint8_t radio868_random_byte(void);
 

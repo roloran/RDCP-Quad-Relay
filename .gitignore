@@ -10,3 +10,4 @@ run.sh
 schnorr.p*
 aeskey-*
 run-relay.sh
+a*.md
