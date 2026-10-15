@@ -149,6 +149,18 @@ void rdcp_forward_schedule(int add_random_delay, bool flag_as_ep_echo)
         }
 #endif 
 
+#ifdef DIRECTIONALCHANNELS
+        /*
+         *    With directional channels enabled, we only send RDCP Messages on the 868 MHz downlink channel if the 
+         *    origin is in the HQ device range.
+         */
+        if (rdcp_msg_in.header.origin > RDCP_HQ_MULTICAST_ADDRESS)
+        {
+            serial_writeln("INFO: Directional channels active. Not queueing for 868 MHz downlink channel as origin is outside HQ range.");
+            return;
+        }
+#endif
+
         char info[INFOLEN];
 
         if ((add_random_delay == FORWARD_DELAY_SHORT) || flag_as_ep_echo)
