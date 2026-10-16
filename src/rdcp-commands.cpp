@@ -116,7 +116,7 @@ void rdcp_pass_response_to_scheduler(uint8_t channel, bool no_larger_delay=false
    {
         /*
          *    With directional channels enabled, we only send RDCP Messages 
-         *      - on the 868 MHz downlink channel if the origin is in the HQ device range.
+         *      - on the 868 MHz downlink channel if the origin is in the HQ device range or it is a Roaming Beacon.
          *      - on the 433 MHz channel if the destination is in the HQ device range.
          */
         if (channel == CHANNEL433)
@@ -129,9 +129,9 @@ void rdcp_pass_response_to_scheduler(uint8_t channel, bool no_larger_delay=false
         }
         else if (channel == CHANNEL868DA)
         {
-            if (rdcp_response.header.origin > RDCP_HQ_MULTICAST_ADDRESS)
+            if ((rdcp_response.header.origin > RDCP_HQ_MULTICAST_ADDRESS) && (rdcp_response.header.message_type != RDCP_MSGTYPE_ROAMINGBEACON))
             {
-                serial_writeln("INFO: Directional channels active. Not queueing for 868 MHz downlink channel as origin is outside HQ range.");
+                serial_writeln("INFO: Directional channels active. Not queueing for 868 MHz downlink channel as origin is outside HQ range and not a roaming beacon.");
                 return;
             }
         }
