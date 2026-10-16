@@ -260,13 +260,14 @@ void rdcp_schedule_relayed_message(int relay_delay)
             }
         }
 
-#ifdef DIRECTIONALCHANNELS
-        if (r.header.destination > RDCP_HQ_MULTICAST_ADDRESS)
+        if (CFG.directional_channels)
         {
-            serial_writeln("INFO: Directional channels active. Not queueing for 433 MHz as destination is outside HQ range.");
-            return;
+            if (r.header.destination > RDCP_HQ_MULTICAST_ADDRESS)
+            {
+                serial_writeln("INFO: Directional channels active. Not queueing for 433 MHz as destination is outside HQ range.");
+                return;
+            }
         }
-#endif
 
         rdcp_txqueue_add(CHANNEL433, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
           important, forcedtx, TX_CALLBACK_RELAY, my_timeslot_begin);

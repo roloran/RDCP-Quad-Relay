@@ -58,10 +58,11 @@ void rdcpv04_tunnel(uint8_t* data, uint8_t len, uint8_t tunneltype)
   rdcp_txqueue_add(CHANNEL433, data_for_scheduler, RDCP_HEADER_SIZE + prepared_rdcpv04_message.header.rdcp_payload_length,
                    NOTIMPORTANT, NOFORCEDTX, TX_CALLBACK_NONE, my_delay);
 
-#ifdef DIRECTIONALCHANNELS
+  if (CFG.directional_channels)
+  {
     serial_writeln("INFO: Directional channels active. Not sending TUNNEL message on 868 MHz downlink channel.");
     return;
-#endif
+  }
 
   serial_writeln("INFO: Scheduling TUNNEL Message on 868DA MHz");
 

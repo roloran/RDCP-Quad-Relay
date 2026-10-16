@@ -112,7 +112,8 @@ void rdcp_pass_response_to_scheduler(uint8_t channel, bool no_larger_delay=false
         my_delay = -100 * (1 + CFG.relay_identifier);
     }
 
-#ifdef DIRECTIONALCHANNELS
+   if (CFG.directional_channels)
+   {
         /*
          *    With directional channels enabled, we only send RDCP Messages 
          *      - on the 868 MHz downlink channel if the origin is in the HQ device range.
@@ -134,7 +135,7 @@ void rdcp_pass_response_to_scheduler(uint8_t channel, bool no_larger_delay=false
                 return;
             }
         }
-#endif
+    }
 
     rdcp_txqueue_add(channel, data_for_scheduler, RDCP_HEADER_SIZE + rdcp_response.header.rdcp_payload_length,
       NOTIMPORTANT, NOFORCEDTX, TX_CALLBACK_NONE, my_delay);
@@ -1098,10 +1099,11 @@ void rdcp_send_cire(uint8_t subtype, uint16_t refnr, char *content)
     for (int i=0; i < rdcp_response.header.rdcp_payload_length; i++) 
         data_for_scheduler[i + RDCP_HEADER_SIZE] = rdcp_response.payload.data[i];
 
-#ifdef DIRECTIONALCHANNELS
-    serial_writeln("INFO: Directional channels active. Not sending CIRE on 868 MHz downlink channel.");
-    return;
-#endif
+    if (CFG.directional_channels)
+    {
+      serial_writeln("INFO: Directional channels active. Not sending CIRE on 868 MHz downlink channel.");
+      return;
+    }
 
     rdcp_txqueue_add(CHANNEL868DA, data_for_scheduler, RDCP_HEADER_SIZE + rdcp_response.header.rdcp_payload_length,
       IMPORTANT, NOFORCEDTX, TX_CALLBACK_NONE, my_delay);

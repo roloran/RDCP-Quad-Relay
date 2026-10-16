@@ -70,6 +70,7 @@ Additional commands:
 - `TUNNEL ADD 12345678` adds a LoRaWAN device to MT 0x40 tunneling.
 - `TUNNEL DEL 12345678` removes a LoRaWAN device from tunneling.
 - `TUNNNEL CLEAR` deleted all LoRaWAN tunnel device entries.
+- `RDCPACDC 0` disables the alternative channel usage mode "directional channels"; `RDCPACDC 1` to enable.
 
 ## Interface to interactive DAs
 

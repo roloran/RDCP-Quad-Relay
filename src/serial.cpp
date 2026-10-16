@@ -950,6 +950,26 @@ void serial_process_command(String s, String processing_mode, bool persist_selec
     uint16_t refnum = (uint16_t) strtol(b1, NULL, 16);
     rdcp_command_fetch_one_from_neighbor(refnum);
   }
+  else if (s_uppercase.startsWith("RDCPACDC "))
+  {
+    // RDCPACDC 0
+    // 01234567890123
+    String p1 = s.substring(9);
+    char b1[32];
+    p1.toCharArray(b1, 32);
+    uint16_t new_mode = (uint16_t) strtol(b1, NULL, 16);
+    if (new_mode == 0)
+    {
+      CFG.directional_channels = false;
+      serial_writeln("INFO: Disabling directional channels");
+    }
+    else 
+    {
+      CFG.directional_channels = true;
+      serial_writeln("INFO: Enabling directional channels");
+    }
+    if (persist_selected_commands) persist_serial_command_for_replay(s);
+  }
   else if (s_uppercase.startsWith("NAME "))
   {
     String p1 = s.substring(5);

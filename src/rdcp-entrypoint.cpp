@@ -144,17 +144,18 @@ void rdcp_entrypoint_schedule(void)
         }
 #endif
 
-#ifdef DIRECTIONALCHANNELS
-        /*
-         *    With directional channels enabled, we only send RDCP Messages on the 433 MHz channel if the 
-         *    destination is in the HQ device range.
-         */
-        if (r.header.destination > RDCP_HQ_MULTICAST_ADDRESS)
+        if (CFG.directional_channels)
         {
-            serial_writeln("INFO: Directional channels active. Not queueing for 433 MHz as destination is outside HQ range.");
-            return;
+            /*
+            *    With directional channels enabled, we only send RDCP Messages on the 433 MHz channel if the 
+            *    destination is in the HQ device range.
+            */
+            if (r.header.destination > RDCP_HQ_MULTICAST_ADDRESS)
+            {
+                serial_writeln("INFO: Directional channels active. Not queueing for 433 MHz as destination is outside HQ range.");
+                return;
+            }
         }
-#endif
 
         rdcp_txqueue_add(CHANNEL433, data_for_scheduler, RDCP_HEADER_SIZE + r.header.rdcp_payload_length,
           important, NOFORCEDTX, TX_CALLBACK_ENTRY, schedtime, ordering_number);
