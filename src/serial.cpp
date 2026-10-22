@@ -144,6 +144,8 @@ void serial_banner(void)
     CFG.heartbeat_interval / MINUTES_TO_MILLISECONDS, 
     CFG.max_periodic868_age / HOURS_TO_MILLISECONDS, 
     CFG.periodic_interval / MINUTES_TO_MILLISECONDS); Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf);
+  snprintf(buf, INFOLEN, "%sINFO: Emergency Button address: %04X", SERIAL_PREFIX, CFG.my_cire_button);
+  Serial.println(buf); if (CFG.bt_enabled) SerialBT.println(buf); Serial1.println(buf);
   return;
 }
 
