@@ -22,7 +22,7 @@ bool rdcp_check_forward_868_relevance(void)
         for MGs or specifically addressed to our own device.
     */
     if (
-        (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_DA_STATUS_REQUEST) ||
+        ((rdcp_msg_in.header.message_type == RDCP_MSGTYPE_DA_STATUS_REQUEST) && (!CFG.directional_channels)) || // forward DA Status Requests only when Directional Channels are used
         // (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_DA_STATUS_RESPONSE) || // NB: needs to reach HQ over 868 MHz
         (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_FETCH_ALL_NEW_MESSAGES) ||
         (rdcp_msg_in.header.message_type == RDCP_MSGTYPE_FETCH_MESSAGE) ||
