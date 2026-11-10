@@ -357,7 +357,7 @@ void rdcp_update_cfest_out(uint8_t channel, uint8_t len, uint8_t rcnt, uint8_t m
       if (!previously_considered)
       {
         future_timeslots = CFG.scenario_num_relays;
-        magic_delay = RDCP_EP_HEADSTART_DELAY;
+        magic_delay = CFG.directional_channels ? 0 : RDCP_EP_HEADSTART_DELAY;
       }
       else 
       {
